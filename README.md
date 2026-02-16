@@ -1,3 +1,9 @@
+# What-sToDo
+
+To-Do application for a university project.
+
+---
+
 # Hierarchische Todo-Kartenverwaltung
 
 Eine moderne, responsive Single Page Application für hierarchische Todo-/Kartenverwaltung mit Rollenrechten, umfangreichen Filter- und Sortierfunktionen und lokaler Persistenz.
