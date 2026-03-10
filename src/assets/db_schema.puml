@@ -1,0 +1,82 @@
+@startuml WhatsToDo Database Schema
+
+!define TABLE(name,desc) class name as "desc" << (T,#FFAAAA) >>
+!define PK(x) <u>x</u>
+!define FK(x) <i>x</i>
+
+hide methods
+hide stereotypes
+
+skinparam classBorderColor #333333
+skinparam classBackgroundColor #FFFDE7
+skinparam classHeaderBackgroundColor #F9A825
+skinparam arrowColor #333333
+skinparam linetype ortho
+left to right direction
+
+TABLE(users, "users") {
+    PK(id) : UUID
+    --
+    name : VARCHAR(100)
+    email : VARCHAR(255) UNIQUE
+    password : VARCHAR(255)
+    created_at : TIMESTAMP
+}
+
+TABLE(projects, "projects") {
+    PK(id) : UUID
+    --
+    name : VARCHAR(255)
+    description : TEXT
+    FK(owner_id) : UUID
+    created_at : TIMESTAMP
+    deadline : TIMESTAMP
+}
+
+TABLE(project_members, "project_members") {
+    PK(FK(project_id)) : UUID
+    PK(FK(user_id)) : UUID
+    --
+    role : SMALLINT
+    ' 0 = Guest
+    ' 1 = Mitarbeiter
+    ' 2 = Admin
+    joined_at : TIMESTAMP
+}
+
+TABLE(tasks, "tasks") {
+    PK(id) : UUID
+    --
+    FK(project_id) : UUID
+    FK(parent_id) : UUID [NULL]
+    title : VARCHAR(255)
+    description : TEXT
+    priority : SMALLINT
+    ' 0 = Niedrig
+    ' 1 = Mittel
+    ' 2 = Hoch
+    status : VARCHAR(50)
+    ' open | in_progress | done
+    FK(creator_id) : UUID
+    deadline : TIMESTAMP
+    created_at : TIMESTAMP
+}
+
+TABLE(task_assignees, "task_assignees") {
+    PK(FK(task_id)) : UUID
+    PK(FK(user_id)) : UUID
+    --
+    assigned_at : TIMESTAMP
+}
+
+' Relationships
+users          "1" --o{ "0..*" projects
+users          "1" --o{ "0..*" project_members
+projects       "1" --o{ "0..*" project_members
+projects       "1" --o{ "0..*" tasks
+users          "1" --o{ "0..*" tasks
+tasks          "1" --o{ "0..*" tasks
+tasks          "1" --o{ "0..*" task_assignees
+users          "1" --o{ "0..*" task_assignees
+
+@enduml
