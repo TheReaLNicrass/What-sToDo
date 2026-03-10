@@ -49,8 +49,8 @@
 | **Frontend** | HTML, CSS, JavaScript |
 | **Backend** | Node.js, Express.js |
 | **Datenbank** | PostgreSQL |
-| **Authentifizierung** | JWT + bcrypt |
-| **API-Testing** | Postman / Thunder Client |
+| **Authentifizierung** | bcrypt (Passwort-Hashing) |
+| **API-Testing** | Postman / Bruno |
 
 ---
 
@@ -62,13 +62,16 @@ taskflow/
 ├── 📄 server.js                  # Einstiegspunkt – startet den Server
 ├── 📄 package.json               # Abhängigkeiten & npm-Skripte
 ├── 📄 .env                       # Umgebungsvariablen (nicht in Git!)
-├── 📄 .env.example               # Vorlage für Umgebungsvariablen
 ├── 📄 .gitignore
 │
 ├── 📁 src/
 │   │
 │   ├── 📄 app.js                 # Express-App, Middleware, Routen
-│   │
+│   |
+|   ├── 📁 assets/                # Diagramme
+|   |   ├── 📄 db_schema.puml
+│   │   └── 📄 Klassendiagramm.puml
+|   |   
 │   ├── 📁 routes/                # URL-Endpunkte
 │   │   ├── 📄 auth.routes.js
 │   │   ├── 📄 user.routes.js
@@ -99,37 +102,7 @@ taskflow/
 │   │
 │   └── 📁 db/
 │       └── 📄 index.js           # PostgreSQL Connection Pool
-│
-└── 📁 sql/
-    └── 📄 schema.sql             # Datenbankschema (CREATE TABLE Statements)
 ```
-
----
-
-## 🗄 Datenbankschema
-
-```
-users ────────────── projectMembers ────────────── projects
-  │                        │                           │
-  │                  (permission 0/1/2)                │
-  │                                                    │
-  └─────────────── tasks (erstellt von) ───────────────┘
-                       │
-             ┌─────────┼──────────┐
-             │         │          │
-        parent_id  assignees   priority
-        (self-ref)
-```
-
-| Tabelle | Beschreibung |
-|---|---|
-| `users` | Alle registrierten Nutzer |
-| `projects` | Projekte / Gruppen |
-| `projectMembers` | Mitgliedschaft & Rollen pro Projekt |
-| `tasks` | Tasks & Unteraufgaben (rekursiv via `parentId`) |
-| `task_assignees` | Zugewiesene Bearbeiter pro Task |
-
----
 
 ## 🌐 API Endpunkte
 
@@ -271,11 +244,11 @@ Berechtigungen gelten **pro Projekt** – ein Nutzer kann in verschiedenen Proje
 
 | Name | Rolle |
 |---|---|
-| [Vorname Nachname](https://github.com/username) | Backend – Node.js / Express / PostgreSQL |
-| [Vorname Nachname](https://github.com/username) | Backend – Node.js / Express / PostgreSQL |
-| [Vorname Nachname](https://github.com/username) | Frontend – HTML / CSS / JavaScript |
-| [Vorname Nachname](https://github.com/username) | Frontend – HTML / CSS / JavaScript |
+| [Niclas Rassbach](https://github.com/TheReaLNicrass) | Backend – Node.js / Express / PostgreSQL |
+| [Chris Rönick](https://github.com/ChrisLR0) | Backend – Node.js / Express / PostgreSQL |
+| [Eliass Piske](https://github.com/tryazgaming) | Frontend – HTML / CSS / JavaScript |
+| [Samira Fröh](https://github.com/lolsamsi) | Frontend – HTML / CSS / JavaScript |
 
 ---
 
-> 📚 Universitätsprojekt – Webentwicklung
+> 📚 Universitätsprojekt – DevOps
