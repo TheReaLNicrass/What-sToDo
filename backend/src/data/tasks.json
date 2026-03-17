@@ -1,0 +1,27 @@
+[
+  {
+    "id": "grp-website-relaunch",
+    "title": "Website-Relaunch",
+    "description": "Obergruppe für den Relaunch inklusive Design, Content und Technik.",
+    "assignee": "Anna",
+    "priority": "high",
+    "status": "wip",
+    "startDate": "2026-03-10",
+    "deadline": "2026-03-28",
+    "finished": false,
+    "children": [
+      {
+        "id": "tsk-design-system",
+        "title": "Design-System abstimmen",
+        "description": "Farben, Buttons, Karten und mobile Layouts definieren.",
+        "assignee": "Clara",
+        "priority": "high",
+        "status": "review",
+        "startDate": "2026-03-11",
+        "deadline": "2026-03-20",
+        "finished": false,
+        "children": []
+      }
+    ]
+  }
+]
