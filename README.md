@@ -110,7 +110,7 @@ WhatsToDo/
 | Methode | Endpunkt | Beschreibung |
 |---|---|---|
 | `POST` | `/api/auth/register` | Neuen Nutzer registrieren |
-| `POST` | `/api/auth/login` | Einloggen & JWT erhalten |
+| `POST` | `/api/auth/login` | Einloggen |
 | `POST` | `/api/auth/logout` | Ausloggen |
 
 ### Projekte
