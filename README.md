@@ -1,4 +1,4 @@
-# 📋 TaskFlow – Enterprise ToDo Manager
+# 📋 WhatsToDo – Enterprise ToDo Manager
 
 > Eine kollaborative Aufgabenverwaltung für Unternehmen mit Projekten, Teams und Berechtigungen.
 
@@ -26,7 +26,7 @@
 
 ## 🚀 Über das Projekt
 
-**TaskFlow** ist eine webbasierte Aufgabenverwaltung für Unternehmen. Nutzer können Projekte anlegen, Teammitglieder einladen und gemeinsam Tasks verwalten. Tasks lassen sich beliebig tief verschachteln – so können große Aufgaben in übersichtliche Unteraufgaben aufgeteilt werden.
+**WhatsToDo** ist eine webbasierte Aufgabenverwaltung für Unternehmen. Nutzer können Projekte anlegen, Teammitglieder einladen und gemeinsam Tasks verwalten. Tasks lassen sich beliebig tief verschachteln – so können große Aufgaben in übersichtliche Unteraufgaben aufgeteilt werden.
 
 ---
 
@@ -57,7 +57,7 @@
 ## 📂 Projektstruktur
 
 ```
-taskflow/
+WhatsToDo/
 │
 ├── 📄 server.js                  # Einstiegspunkt – startet den Server
 ├── 📄 package.json               # Abhängigkeiten & npm-Skripte
@@ -164,8 +164,8 @@ taskflow/
 ### 1. Repository klonen
 
 ```bash
-git clone https://github.com/euer-username/taskflow.git
-cd taskflow
+git clone https://github.com/TheReaLNicrass/What-sToDo.git
+cd WhatsToDo
 ```
 
 ### 2. Abhängigkeiten installieren
@@ -179,11 +179,11 @@ npm install
 ```bash
 # In PostgreSQL einloggen und Datenbank erstellen
 psql -U postgres
-CREATE DATABASE taskflow;
+CREATE DATABASE WhatsToDo;
 \q
 
 # Schema importieren
-psql -U postgres -d taskflow -f sql/schema.sql
+psql -U postgres -d WhatsToDo -f sql/schema.sql
 ```
 
 ### 4. Umgebungsvariablen setzen
@@ -218,7 +218,7 @@ PORT=3000
 # Datenbank
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=taskflow
+DB_NAME=WhatsToDo
 DB_USER=euer_db_nutzer
 DB_PASSWORD=euer_passwort
 
