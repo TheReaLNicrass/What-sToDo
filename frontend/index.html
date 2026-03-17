@@ -589,153 +589,48 @@
   <script>
     const people = ["Nicht zugewiesen", "Anna", "Ben", "Clara", "David", "Eva"];
     const roles = {
-      admin: {
-        label: "Admin",
-        description: "Darf alles: erstellen, bearbeiten, zuweisen, verschachteln, löschen und abschließen.",
-        canCreate: true,
-        canEdit: true,
-        canDelete: true,
-        canAssignOthers: true,
-        canCompleteOwn: true,
-        canCompleteOthers: true,
-      },
-      employee: {
-        label: "Mitarbeiter",
-        description: "Darf lesen, eigene Aufgaben abhaken und persönliche Aufgaben anlegen, aber nichts an andere zuweisen.",
-        canCreate: true,
-        canEdit: true,
-        canDelete: false,
-        canAssignOthers: false,
-        canCompleteOwn: true,
-        canCompleteOthers: false,
-      },
-      guest: {
-        label: "Gast",
-        description: "Darf nur lesen. Keine Änderungen, kein Löschen, kein Hinzufügen.",
-        canCreate: false,
-        canEdit: false,
-        canDelete: false,
-        canAssignOthers: false,
-        canCompleteOwn: false,
-        canCompleteOthers: false,
-      }
+      admin: { label: "Admin", description: "Darf alles.", canCreate: true, canEdit: true, canDelete: true, canAssignOthers: true },
+      employee: { label: "Mitarbeiter", description: "Darf eigene Aufgaben pflegen.", canCreate: true, canEdit: true, canDelete: false, canAssignOthers: false },
+      guest: { label: "Gast", description: "Nur lesend.", canCreate: false, canEdit: false, canDelete: false, canAssignOthers: false }
     };
 
+    const API_BASE = "/api/tasks";
+    let tasks = [];
     let currentRole = "admin";
     let currentUser = "Ben";
     let editTaskId = null;
 
-    let tasks = [
-      {
-        id: crypto.randomUUID(),
-        title: "Website-Relaunch",
-        description: "Obergruppe für den Relaunch inklusive Design, Content und Technik.",
-        assignee: "Anna",
-        priority: "high",
-        status: "wip",
-        startDate: "2026-03-10",
-        deadline: "2026-03-28",
-        finished: false,
-        children: [
-          {
-            id: crypto.randomUUID(),
-            title: "Design-System abstimmen",
-            description: "Farben, Buttons, Karten und mobile Layouts definieren.",
-            assignee: "Clara",
-            priority: "high",
-            status: "review",
-            startDate: "2026-03-11",
-            deadline: "2026-03-20",
-            finished: false,
-            children: []
-          },
-          {
-            id: crypto.randomUUID(),
-            title: "Content-Migration",
-            description: "Alte Inhalte prüfen und neue Seitenstruktur übernehmen.",
-            assignee: "Ben",
-            priority: "medium",
-            status: "wip",
-            startDate: "2026-03-12",
-            deadline: "2026-03-25",
-            finished: false,
-            children: [
-              {
-                id: crypto.randomUUID(),
-                title: "FAQ finalisieren",
-                description: "Antworten in finaler Textfassung ergänzen.",
-                assignee: "Ben",
-                priority: "low",
-                status: "new",
-                startDate: "2026-03-16",
-                deadline: "2026-03-22",
-                finished: false,
-                children: []
-              }
-            ]
-          }
-        ]
-      },
-      {
-        id: crypto.randomUUID(),
-        title: "Interne Ideenliste Q2",
-        description: "Sammelgruppe für neue Features und Prozessideen.",
-        assignee: "Nicht zugewiesen",
-        priority: "medium",
-        status: "idea",
-        startDate: "2026-03-15",
-        deadline: "2026-04-15",
-        finished: false,
-        children: []
-      },
-      {
-        id: crypto.randomUUID(),
-        title: "Server-Monitoring prüfen",
-        description: "Warnschwellen und Benachrichtigungen gegenchecken.",
-        assignee: "David",
-        priority: "high",
-        status: "paused",
-        startDate: "2026-03-08",
-        deadline: "2026-03-18",
-        finished: true,
-        children: []
-      }
-    ];
-
     const el = {
-      assignee: document.getElementById("assignee"),
-      priority: document.getElementById("priority"),
-      status: document.getElementById("status"),
-      title: document.getElementById("title"),
-      description: document.getElementById("description"),
-      startDate: document.getElementById("startDate"),
-      deadline: document.getElementById("deadline"),
-      parentTask: document.getElementById("parentTask"),
-      saveTaskBtn: document.getElementById("saveTaskBtn"),
-      cancelEditBtn: document.getElementById("cancelEditBtn"),
-      roleSelect: document.getElementById("roleSelect"),
-      roleDescription: document.getElementById("roleDescription"),
-      roleBannerText: document.getElementById("roleBannerText"),
-      rolePill: document.getElementById("rolePill"),
-      taskTree: document.getElementById("taskTree"),
-      finishedList: document.getElementById("finishedList"),
-      stats: document.getElementById("stats"),
-      searchInput: document.getElementById("searchInput"),
-      filterPerson: document.getElementById("filterPerson"),
-      filterGroup: document.getElementById("filterGroup"),
-      filterStatus: document.getElementById("filterStatus"),
-      periodFrom: document.getElementById("periodFrom"),
-      periodTo: document.getElementById("periodTo"),
-      sortBy: document.getElementById("sortBy"),
-      sortDirection: document.getElementById("sortDirection"),
+      assignee: document.getElementById("assignee"), priority: document.getElementById("priority"), status: document.getElementById("status"),
+      title: document.getElementById("title"), description: document.getElementById("description"), startDate: document.getElementById("startDate"), deadline: document.getElementById("deadline"),
+      parentTask: document.getElementById("parentTask"), saveTaskBtn: document.getElementById("saveTaskBtn"), cancelEditBtn: document.getElementById("cancelEditBtn"),
+      roleSelect: document.getElementById("roleSelect"), roleDescription: document.getElementById("roleDescription"), roleBannerText: document.getElementById("roleBannerText"), rolePill: document.getElementById("rolePill"),
+      taskTree: document.getElementById("taskTree"), finishedList: document.getElementById("finishedList"), stats: document.getElementById("stats"),
+      searchInput: document.getElementById("searchInput"), filterPerson: document.getElementById("filterPerson"), filterGroup: document.getElementById("filterGroup"), filterStatus: document.getElementById("filterStatus"),
+      periodFrom: document.getElementById("periodFrom"), periodTo: document.getElementById("periodTo"), sortBy: document.getElementById("sortBy"), sortDirection: document.getElementById("sortDirection"),
     };
 
-    function init() {
+    async function api(path = "", options = {}) {
+      const res = await fetch(`${API_BASE}${path}`, { headers: { "Content-Type": "application/json" }, ...options });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(body || "API Fehler");
+      }
+      return res.status === 204 ? null : res.json();
+    }
+
+    async function init() {
       populatePeopleSelects();
-      updateParentSelect();
-      updateGroupFilter();
       bindEvents();
       updateRoleUI();
+      injectQuickAddButton();
+      await reloadFromApi();
+    }
+
+    async function reloadFromApi() {
+      tasks = await api();
+      updateParentSelect();
+      updateGroupFilter();
       render();
     }
 
@@ -746,26 +641,26 @@
       el.filterPerson.innerHTML = `<option value="all">Alle Personen</option>${options}`;
     }
 
-    function updateGroupFilter() {
-      const roots = tasks.filter(t => !t.finished);
-      const opts = roots.map(t => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join("");
-      el.filterGroup.innerHTML = `<option value="all">Alle Obergruppen</option>${opts}`;
-    }
-
     function bindEvents() {
       el.saveTaskBtn.addEventListener("click", onSaveTask);
       el.cancelEditBtn.addEventListener("click", resetForm);
-      el.roleSelect.addEventListener("change", () => {
-        currentRole = el.roleSelect.value;
-        if (currentRole === "employee") {
-          el.assignee.value = currentUser;
-        }
-        updateRoleUI();
-        render();
-      });
-
+      el.roleSelect.addEventListener("change", () => { currentRole = el.roleSelect.value; updateRoleUI(); render(); });
       [el.searchInput, el.filterPerson, el.filterGroup, el.filterStatus, el.periodFrom, el.periodTo, el.sortBy, el.sortDirection]
         .forEach(node => node.addEventListener("input", render));
+    }
+
+    function injectQuickAddButton() {
+      const btn = document.createElement("button");
+      btn.className = "btn btn-success";
+      btn.textContent = "3 Sprint-Ideen";
+      btn.addEventListener("click", async () => {
+        const ideas = ["Retro vorbereiten", "Bug-Bash organisieren", "Release Notes schreiben"];
+        for (const title of ideas) {
+          await api("", { method: "POST", body: JSON.stringify({ title, assignee: currentUser, priority: "medium", status: "idea", parentId: "root" }) });
+        }
+        await reloadFromApi();
+      });
+      el.cancelEditBtn.parentElement.appendChild(btn);
     }
 
     function updateRoleUI() {
@@ -773,390 +668,108 @@
       el.roleDescription.textContent = role.description;
       el.roleBannerText.textContent = role.description;
       el.rolePill.textContent = role.label;
-
       const canCreate = role.canCreate;
-      [el.title, el.description, el.assignee, el.priority, el.status, el.startDate, el.deadline, el.parentTask].forEach(input => {
-        input.disabled = !canCreate && !editTaskId;
-      });
+      [el.title, el.description, el.assignee, el.priority, el.status, el.startDate, el.deadline, el.parentTask].forEach(input => input.disabled = !canCreate && !editTaskId);
       el.saveTaskBtn.disabled = !canCreate && !editTaskId;
     }
 
-    function onSaveTask() {
+    async function onSaveTask() {
       const role = roles[currentRole];
-      if (!editTaskId && !role.canCreate) return;
-      if (editTaskId && !role.canEdit) return;
-
+      if ((!editTaskId && !role.canCreate) || (editTaskId && !role.canEdit)) return;
       const title = el.title.value.trim();
-      if (!title) {
-        alert("Bitte einen Titel eingeben.");
-        return;
-      }
+      if (!title) return alert("Bitte einen Titel eingeben.");
 
-      const assignee = role.canAssignOthers ? el.assignee.value : currentUser;
-      const taskData = {
-        id: editTaskId || crypto.randomUUID(),
+      const payload = {
         title,
         description: el.description.value.trim(),
-        assignee,
+        assignee: role.canAssignOthers ? el.assignee.value : currentUser,
         priority: el.priority.value,
         status: el.status.value,
         startDate: el.startDate.value,
         deadline: el.deadline.value,
-        finished: false,
-        children: editTaskId ? getTaskById(editTaskId)?.children || [] : []
+        parentId: el.parentTask.value || "root"
       };
 
-      const selectedParentId = el.parentTask.value || "root";
-
       if (editTaskId) {
-        const existing = removeTaskById(editTaskId);
-        taskData.finished = existing?.finished || false;
-        taskData.children = existing?.children || [];
-      }
-
-      if (selectedParentId === "root") {
-        tasks.push(taskData);
+        const existing = getTaskById(editTaskId);
+        payload.finished = existing?.finished || false;
+        payload.children = existing?.children || [];
+        await api(`/${editTaskId}`, { method: "PUT", body: JSON.stringify(payload) });
       } else {
-        const parent = getTaskById(selectedParentId);
-        if (parent) {
-          parent.children ||= [];
-          parent.children.push(taskData);
-        } else {
-          tasks.push(taskData);
-        }
+        await api("", { method: "POST", body: JSON.stringify(payload) });
       }
 
-      updateParentSelect();
-      updateGroupFilter();
       resetForm();
-      render();
+      await reloadFromApi();
     }
 
     function resetForm() {
       editTaskId = null;
-      el.title.value = "";
-      el.description.value = "";
-      el.assignee.value = currentRole === "employee" ? currentUser : people[0];
-      el.priority.value = "medium";
-      el.status.value = "new";
-      el.startDate.value = "";
-      el.deadline.value = "";
-      el.parentTask.value = "root";
-      el.saveTaskBtn.textContent = "Hinzufügen";
-      el.cancelEditBtn.style.display = "none";
+      el.title.value = ""; el.description.value = ""; el.assignee.value = currentRole === "employee" ? currentUser : people[0];
+      el.priority.value = "medium"; el.status.value = "new"; el.startDate.value = ""; el.deadline.value = ""; el.parentTask.value = "root";
+      el.saveTaskBtn.textContent = "Hinzufügen"; el.cancelEditBtn.style.display = "none";
       updateRoleUI();
     }
 
     function updateParentSelect() {
-      const allOpenTasks = flattenTasks(tasks).filter(t => !t.finished);
-      const opts = allOpenTasks.map(task => {
-        const prefix = "— ".repeat(task.depth);
-        return `<option value="${task.id}">${prefix}${escapeHtml(task.title)}</option>`;
-      }).join("");
+      const opts = flattenTasks(tasks).filter(t => !t.finished).map(task => `<option value="${task.id}">${"— ".repeat(task.depth)}${escapeHtml(task.title)}</option>`).join("");
       el.parentTask.innerHTML = `<option value="root">Keine Obergruppe (Top-Level)</option>${opts}`;
     }
 
+    function updateGroupFilter() {
+      const opts = tasks.filter(t => !t.finished).map(t => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join("");
+      el.filterGroup.innerHTML = `<option value="all">Alle Obergruppen</option>${opts}`;
+    }
+
     function render() {
-      const filteredActive = getVisibleTree(tasks.filter(t => !t.finished), null);
-      const finished = flattenTasks(tasks)
-        .filter(item => item.finished)
-        .sort((a, b) => compareTasks(a, b, el.sortBy.value, el.sortDirection.value));
-
-      el.taskTree.innerHTML = filteredActive.length
-        ? filteredActive.map(task => renderTaskNode(task)).join("")
-        : `<div class="empty-state">Keine aktiven Aufgaben für die aktuellen Filter gefunden.</div>`;
-
-      el.finishedList.innerHTML = finished.length
-        ? finished.map(task => renderFinishedCard(task)).join("")
-        : `<div class="empty-state">Noch keine abgeschlossenen Aufgaben.</div>`;
-
+      const active = getVisibleTree(tasks.filter(t => !t.finished));
+      const done = flattenTasks(tasks).filter(t => t.finished).sort((a,b)=>compareTasks(a,b,el.sortBy.value,el.sortDirection.value));
+      el.taskTree.innerHTML = active.length ? active.map(renderTaskNode).join("") : `<div class="empty-state">Keine aktiven Aufgaben gefunden.</div>`;
+      el.finishedList.innerHTML = done.length ? done.map(renderFinishedCard).join("") : `<div class="empty-state">Noch keine abgeschlossenen Aufgaben.</div>`;
       renderStats();
       attachActionEvents();
     }
 
-    function renderStats() {
-      const flat = flattenTasks(tasks);
-      const active = flat.filter(t => !t.finished).length;
-      const done = flat.filter(t => t.finished).length;
-      const overdue = flat.filter(t => !t.finished && t.deadline && t.deadline < today()).length;
-      const groups = tasks.length;
-
+    async function renderStats() {
+      const summary = await api('/summary');
       el.stats.innerHTML = [
-        { label: "Aktiv", value: active },
-        { label: "Erledigt", value: done },
-        { label: "Überfällig", value: overdue },
-        { label: "Obergruppen", value: groups }
-      ].map(stat => `
-        <div class="stat">
-          <div class="value">${stat.value}</div>
-          <div class="muted">${stat.label}</div>
-        </div>
-      `).join("");
+        { label: "Aktiv", value: summary.active }, { label: "Erledigt", value: summary.done },
+        { label: "Überfällig", value: summary.overdue }, { label: "Obergruppen", value: summary.groups }
+      ].map(s => `<div class="stat"><div class="value">${s.value}</div><div class="muted">${s.label}</div></div>`).join("");
     }
 
-    function renderTaskNode(task) {
-      const priorityColor = getPriorityColor(task.priority);
-      return `
-        <div class="task-node">
-          <div class="task-card" style="--priority-color:${priorityColor}">
-            <div class="task-header">
-              <div class="task-title-row">
-                <input class="checkbox" type="checkbox" data-action="toggle-finished" data-id="${task.id}" ${task.finished ? "checked" : ""} ${!canToggleTask(task) ? "disabled" : ""} />
-                <div>
-                  <h4 class="task-title">${escapeHtml(task.title)}</h4>
-                  <div class="task-sub">${escapeHtml(task.description || "Keine Beschreibung")}</div>
-                  <div class="chips">
-                    <span class="chip status">${statusLabel(task.status)}</span>
-                    <span class="chip priority-${task.priority}">${priorityLabel(task.priority)}</span>
-                    <span class="chip">👤 ${escapeHtml(task.assignee)}</span>
-                    <span class="chip">📅 ${task.deadline || "keine Deadline"}</span>
-                    ${task.startDate ? `<span class="chip">Start ${task.startDate}</span>` : ""}
-                    ${task.children?.length ? `<span class="chip">${task.children.length} Unterelemente</span>` : ""}
-                  </div>
-                </div>
-              </div>
+    function renderTaskNode(task) { return `<div class="task-node"><div class="task-card" style="--priority-color:${getPriorityColor(task.priority)}"><div class="task-header"><div class="task-title-row"><input class="checkbox" type="checkbox" data-action="toggle-finished" data-id="${task.id}" ${task.finished ? "checked" : ""} ${!canToggleTask(task) ? "disabled" : ""} /><div><h4 class="task-title">${escapeHtml(task.title)}</h4><div class="task-sub">${escapeHtml(task.description || "Keine Beschreibung")}</div><div class="chips"><span class="chip status">${statusLabel(task.status)}</span><span class="chip priority-${task.priority}">${priorityLabel(task.priority)}</span><span class="chip">👤 ${escapeHtml(task.assignee)}</span><span class="chip">📅 ${task.deadline || "keine Deadline"}</span></div></div></div><div class="task-actions"><button class="icon-btn" data-action="add-child" data-id="${task.id}" ${!roles[currentRole].canCreate ? "disabled" : ""}>+ Unterpunkt</button><button class="icon-btn" data-action="edit" data-id="${task.id}" ${!canEditTask(task) ? "disabled" : ""}>Bearbeiten</button><button class="icon-btn" data-action="delete" data-id="${task.id}" ${!canDeleteTask(task) ? "disabled" : ""}>Löschen</button></div></div></div>${task.children?.length ? `<div class="children">${task.children.map(renderTaskNode).join("")}</div>` : ""}</div>`; }
+    function renderFinishedCard(task) { return `<div class="task-card finished" style="--priority-color:${getPriorityColor(task.priority)}"><div class="task-header"><div class="task-title-row"><input class="checkbox" type="checkbox" checked data-action="toggle-finished" data-id="${task.id}" ${!canToggleTask(task) ? "disabled" : ""} /><div><h4 class="task-title">${escapeHtml(task.title)}</h4><div class="task-sub">${escapeHtml(task.description || "Keine Beschreibung")}</div></div></div><div class="task-actions"><button class="icon-btn" data-action="edit" data-id="${task.id}" ${!canEditTask(task) ? "disabled" : ""}>Bearbeiten</button></div></div></div>`; }
 
-              <div class="task-actions">
-                <button class="icon-btn" data-action="add-child" data-id="${task.id}" ${!roles[currentRole].canCreate ? "disabled" : ""}>+ Unterpunkt</button>
-                <button class="icon-btn" data-action="edit" data-id="${task.id}" ${!canEditTask(task) ? "disabled" : ""}>Bearbeiten</button>
-                <button class="icon-btn" data-action="delete" data-id="${task.id}" ${!canDeleteTask(task) ? "disabled" : ""}>Löschen</button>
-              </div>
-            </div>
-          </div>
-          ${task.children?.length ? `<div class="children">${task.children.map(child => renderTaskNode(child)).join("")}</div>` : ""}
-        </div>
-      `;
-    }
+    function attachActionEvents() { document.querySelectorAll("[data-action]").forEach(btn => btn.addEventListener("click", async (event) => {
+      const action = event.currentTarget.dataset.action; const id = event.currentTarget.dataset.id;
+      if (action === "toggle-finished") return toggleFinished(id);
+      if (action === "edit") return startEdit(id);
+      if (action === "delete") return deleteTask(id);
+      if (action === "add-child") return prepareChild(id);
+    })); }
 
-    function renderFinishedCard(task) {
-      return `
-        <div class="task-card finished" style="--priority-color:${getPriorityColor(task.priority)}">
-          <div class="task-header">
-            <div class="task-title-row">
-              <input class="checkbox" type="checkbox" checked data-action="toggle-finished" data-id="${task.id}" ${!canToggleTask(task) ? "disabled" : ""} />
-              <div>
-                <h4 class="task-title">${escapeHtml(task.title)}</h4>
-                <div class="task-sub">${escapeHtml(task.description || "Keine Beschreibung")}</div>
-                <div class="chips">
-                  <span class="chip status">${statusLabel(task.status)}</span>
-                  <span class="chip">👤 ${escapeHtml(task.assignee)}</span>
-                  <span class="chip">Fällig: ${task.deadline || "-"}</span>
-                </div>
-              </div>
-            </div>
-            <div class="task-actions">
-              <button class="icon-btn" data-action="edit" data-id="${task.id}" ${!canEditTask(task) ? "disabled" : ""}>Bearbeiten</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
+    function prepareChild(id) { if (!roles[currentRole].canCreate) return; el.parentTask.value = id; el.title.focus(); }
+    function startEdit(id) { const task = getTaskById(id); if (!task || !canEditTask(task)) return; editTaskId = id; el.title.value = task.title; el.description.value = task.description; el.assignee.value = task.assignee; el.priority.value = task.priority; el.status.value = task.status; el.startDate.value = task.startDate; el.deadline.value = task.deadline; el.saveTaskBtn.textContent = "Änderungen speichern"; el.cancelEditBtn.style.display = "inline-flex"; window.scrollTo({ top: 0, behavior: "smooth" }); }
+    async function deleteTask(id) { if (!roles[currentRole].canDelete) return; const task = getTaskById(id); if (!task) return; if (!confirm(`"${task.title}" wirklich löschen?`)) return; await api(`/${id}`, { method: "DELETE" }); await reloadFromApi(); }
+    async function toggleFinished(id) { const task = getTaskById(id); if (!task || !canToggleTask(task)) return; await api(`/${id}/toggle`, { method: "PATCH" }); await reloadFromApi(); }
 
-    function attachActionEvents() {
-      document.querySelectorAll("[data-action]").forEach(btn => {
-        btn.addEventListener("click", event => {
-          const action = event.currentTarget.dataset.action;
-          const id = event.currentTarget.dataset.id;
-          if (action === "toggle-finished") return toggleFinished(id);
-          if (action === "edit") return startEdit(id);
-          if (action === "delete") return deleteTask(id);
-          if (action === "add-child") return prepareChild(id);
-        });
-      });
-    }
+    function canEditTask(task) { if (currentRole === "admin") return true; if (currentRole === "employee") return task.assignee === currentUser; return false; }
+    function canDeleteTask() { return currentRole === "admin"; }
+    function canToggleTask(task) { return canEditTask(task); }
 
-    function prepareChild(id) {
-      if (!roles[currentRole].canCreate) return;
-      el.parentTask.value = id;
-      el.title.focus();
-    }
+    function getVisibleTree(list) { const root = el.filterGroup.value !== "all" ? el.filterGroup.value : null; const roots = root ? list.filter(item => item.id === root) : list; return [...roots].map(filterTree).filter(Boolean).sort((a,b)=>compareTasks(a,b,el.sortBy.value,el.sortDirection.value)); }
+    function filterTree(task) { const childMatches = (task.children || []).map(filterTree).filter(Boolean).sort((a,b)=>compareTasks(a,b,el.sortBy.value,el.sortDirection.value)); if (matchesFilters(task) || childMatches.length) return { ...task, children: childMatches }; return null; }
+    function matchesFilters(task) { const search = el.searchInput.value.trim().toLowerCase(); const person = el.filterPerson.value; const status = el.filterStatus.value; const from = el.periodFrom.value; const to = el.periodTo.value; const hay = `${task.title} ${task.description}`.toLowerCase(); return (!search || hay.includes(search)) && (person === "all" || task.assignee === person) && (status === "all" || task.status === status) && matchesPeriod(task, from, to); }
+    function matchesPeriod(task, from, to) { if (!from && !to) return true; const start = task.startDate || task.deadline || ""; const end = task.deadline || task.startDate || ""; if (!start && !end) return false; if (from && end && end < from) return false; if (to && start && start > to) return false; return true; }
+    function compareTasks(a,b,sortBy,direction="asc"){ const factor = direction === "asc" ? 1 : -1; if (sortBy === "name") return a.title.localeCompare(b.title,"de")*factor; if (sortBy === "priority"){ const map={high:3,medium:2,low:1}; return ((map[a.priority]||0)-(map[b.priority]||0))*factor; } return (a.deadline||"9999-12-31").localeCompare(b.deadline||"9999-12-31")*factor; }
+    function flattenTasks(list, depth = 0, parentId = null, bucket = []) { for (const task of list) { bucket.push({ ...task, depth, parentId }); if (task.children?.length) flattenTasks(task.children, depth + 1, task.id, bucket); } return bucket; }
+    function getTaskById(id, list = tasks) { for (const task of list) { if (task.id === id) return task; const found = getTaskById(id, task.children || []); if (found) return found; } return null; }
 
-    function startEdit(id) {
-      const role = roles[currentRole];
-      const task = getTaskById(id);
-      if (!task || !role.canEdit) return;
-      if (currentRole === "employee" && task.assignee !== currentUser) return;
-
-      editTaskId = id;
-      el.title.value = task.title;
-      el.description.value = task.description;
-      el.assignee.value = task.assignee;
-      el.priority.value = task.priority;
-      el.status.value = task.status;
-      el.startDate.value = task.startDate;
-      el.deadline.value = task.deadline;
-      el.saveTaskBtn.textContent = "Änderungen speichern";
-      el.cancelEditBtn.style.display = "inline-flex";
-      updateRoleUI();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    function deleteTask(id) {
-      if (!roles[currentRole].canDelete) return;
-      const task = getTaskById(id);
-      if (!task) return;
-      if (!confirm(`"${task.title}" wirklich löschen? Unterelemente werden mit entfernt.`)) return;
-      removeTaskById(id);
-      updateParentSelect();
-      updateGroupFilter();
-      render();
-    }
-
-    function toggleFinished(id) {
-      const task = getTaskById(id);
-      if (!task || !canToggleTask(task)) return;
-      task.finished = !task.finished;
-      render();
-    }
-
-    function canEditTask(task) {
-      if (currentRole === "admin") return true;
-      if (currentRole === "employee") return task.assignee === currentUser;
-      return false;
-    }
-
-    function canDeleteTask(task) {
-      return currentRole === "admin";
-    }
-
-    function canToggleTask(task) {
-      if (currentRole === "admin") return true;
-      if (currentRole === "employee") return task.assignee === currentUser;
-      return false;
-    }
-
-    function getVisibleTree(list, rootGroupId) {
-      const activeRootGroup = el.filterGroup.value;
-      const selectedRoot = activeRootGroup !== "all" ? activeRootGroup : null;
-      const roots = selectedRoot ? list.filter(item => item.id === selectedRoot) : list;
-      const sorted = [...roots].sort((a, b) => compareTasks(a, b, el.sortBy.value, el.sortDirection.value));
-
-      return sorted.map(task => filterTree(task)).filter(Boolean);
-    }
-
-    function filterTree(task) {
-      const childMatches = (task.children || [])
-        .map(child => filterTree(child))
-        .filter(Boolean)
-        .sort((a, b) => compareTasks(a, b, el.sortBy.value, el.sortDirection.value));
-
-      const selfMatches = matchesFilters(task);
-      if (selfMatches || childMatches.length) {
-        return { ...task, children: childMatches };
-      }
-      return null;
-    }
-
-    function matchesFilters(task) {
-      const search = el.searchInput.value.trim().toLowerCase();
-      const person = el.filterPerson.value;
-      const status = el.filterStatus.value;
-      const from = el.periodFrom.value;
-      const to = el.periodTo.value;
-
-      const haystack = `${task.title} ${task.description}`.toLowerCase();
-      const searchOk = !search || haystack.includes(search);
-      const personOk = person === "all" || task.assignee === person;
-      const statusOk = status === "all" || task.status === status;
-      const periodOk = matchesPeriod(task, from, to);
-
-      return searchOk && personOk && statusOk && periodOk;
-    }
-
-    function matchesPeriod(task, from, to) {
-      if (!from && !to) return true;
-      const start = task.startDate || task.deadline || "";
-      const end = task.deadline || task.startDate || "";
-
-      if (!start && !end) return false;
-      if (from && end && end < from) return false;
-      if (to && start && start > to) return false;
-      return true;
-    }
-
-    function compareTasks(a, b, sortBy, direction = "asc") {
-      const factor = direction === "asc" ? 1 : -1;
-
-      let result = 0;
-      if (sortBy === "name") {
-        result = a.title.localeCompare(b.title, "de");
-      } else if (sortBy === "priority") {
-        const map = { high: 3, medium: 2, low: 1 };
-        result = (map[a.priority] || 0) - (map[b.priority] || 0);
-      } else {
-        const aDate = a.deadline || "9999-12-31";
-        const bDate = b.deadline || "9999-12-31";
-        result = aDate.localeCompare(bDate);
-      }
-      return result * factor;
-    }
-
-    function flattenTasks(list, depth = 0, parentId = null, bucket = []) {
-      for (const task of list) {
-        bucket.push({ ...task, depth, parentId });
-        if (task.children?.length) flattenTasks(task.children, depth + 1, task.id, bucket);
-      }
-      return bucket;
-    }
-
-    function getTaskById(id, list = tasks) {
-      for (const task of list) {
-        if (task.id === id) return task;
-        const found = getTaskById(id, task.children || []);
-        if (found) return found;
-      }
-      return null;
-    }
-
-    function removeTaskById(id, list = tasks) {
-      for (let i = 0; i < list.length; i++) {
-        if (list[i].id === id) {
-          return list.splice(i, 1)[0];
-        }
-        const removed = removeTaskById(id, list[i].children || []);
-        if (removed) return removed;
-      }
-      return null;
-    }
-
-    function statusLabel(status) {
-      return {
-        new: "Neu",
-        idea: "Idee",
-        wip: "Work in Progress",
-        paused: "Pausiert",
-        review: "In Review"
-      }[status] || status;
-    }
-
-    function priorityLabel(priority) {
-      return {
-        high: "Hoch",
-        medium: "Mittel",
-        low: "Niedrig"
-      }[priority] || priority;
-    }
-
-    function getPriorityColor(priority) {
-      return {
-        high: "#ef4444",
-        medium: "#f59e0b",
-        low: "#22c55e"
-      }[priority] || "#60a5fa";
-    }
-
-    function today() {
-      return new Date().toISOString().slice(0, 10);
-    }
-
-    function escapeHtml(value) {
-      return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
+    function statusLabel(status) { return { new: "Neu", idea: "Idee", wip: "Work in Progress", paused: "Pausiert", review: "In Review" }[status] || status; }
+    function priorityLabel(priority) { return { high: "Hoch", medium: "Mittel", low: "Niedrig" }[priority] || priority; }
+    function getPriorityColor(priority) { return { high: "#ef4444", medium: "#f59e0b", low: "#22c55e" }[priority] || "#60a5fa"; }
+    function escapeHtml(value) { return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
 
     init();
   </script>
