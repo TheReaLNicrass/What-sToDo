@@ -149,6 +149,11 @@ taskflow/
 
 ---
 
+## 🗃️ Datenbankschema
+
+<img width="982" height="468" alt="Datenbankschema" src="https://github.com/user-attachments/assets/15366515-719d-448a-ad40-9380747a2e3b" />
+
+
 ## ⚙️ Installation
 
 ### Voraussetzungen
