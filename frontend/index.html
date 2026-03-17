@@ -399,6 +399,73 @@
       .task-header { flex-direction: column; }
       .task-actions { justify-content: flex-start; }
     }
+        .hidden {
+      display: none !important;
+    }
+
+    .auth-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.72);
+      backdrop-filter: blur(8px);
+      display: grid;
+      place-items: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+
+    .auth-modal {
+      width: min(100%, 460px);
+      padding: 22px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(15, 23, 42, 0.96));
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+    }
+
+    .auth-modal-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .auth-modal-header h3 {
+      margin: 0 0 8px;
+      font-size: 1.15rem;
+    }
+
+    .auth-close-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1rem;
+      flex: 0 0 auto;
+    }
+
+    .auth-close-btn:hover {
+      background: rgba(255,255,255,0.08);
+    }
+
+    .auth-actions {
+      justify-content: flex-end;
+      margin-top: 14px;
+    }
+
+    .auth-error {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(239, 68, 68, 0.12);
+      color: #fecaca;
+      border: 1px solid rgba(239, 68, 68, 0.24);
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
@@ -585,7 +652,38 @@
       </section>
     </main>
   </div>
+  <div class="auth-modal-backdrop hidden" id="authModalBackdrop">
+    <div class="auth-modal card" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+      <div class="auth-modal-header">
+        <div>
+          <h3 id="authModalTitle">Rollenwechsel bestätigen</h3>
+          <p id="authModalText" class="muted">
+            Bitte Passwort eingeben, um die Rolle zu wechseln.
+          </p>
+        </div>
+        <button class="auth-close-btn" id="authModalCloseBtn" type="button" aria-label="Schließen">✕</button>
+      </div>
 
+      <div class="field">
+        <label for="authPasswordInput">Passwort</label>
+        <input
+          id="authPasswordInput"
+          type="password"
+          placeholder="Passwort eingeben"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="auth-error hidden" id="authError">
+        Falsches Passwort. Bitte erneut versuchen.
+      </div>
+
+      <div class="btn-row auth-actions">
+        <button class="btn btn-secondary" id="authCancelBtn" type="button">Abbrechen</button>
+        <button class="btn btn-primary" id="authConfirmBtn" type="button">Bestätigen</button>
+      </div>
+    </div>
+  </div>
   <script>
     const people = ["Nicht zugewiesen", "Anna", "Ben", "Clara", "David", "Eva"];
     const roles = {
@@ -624,6 +722,8 @@
     let currentRole = "admin";
     let currentUser = "Ben";
     let editTaskId = null;
+    const ROLE_PASSWORD = "1234";
+    let pendingRole = null;
 
     let tasks = [
       {
@@ -728,6 +828,13 @@
       periodTo: document.getElementById("periodTo"),
       sortBy: document.getElementById("sortBy"),
       sortDirection: document.getElementById("sortDirection"),
+      authModalBackdrop: document.getElementById("authModalBackdrop"),
+      authModalText: document.getElementById("authModalText"),
+      authPasswordInput: document.getElementById("authPasswordInput"),
+      authError: document.getElementById("authError"),
+      authConfirmBtn: document.getElementById("authConfirmBtn"),
+      authCancelBtn: document.getElementById("authCancelBtn"),
+      authModalCloseBtn: document.getElementById("authModalCloseBtn"),
     };
 
     function init() {
@@ -755,17 +862,109 @@
     function bindEvents() {
       el.saveTaskBtn.addEventListener("click", onSaveTask);
       el.cancelEditBtn.addEventListener("click", resetForm);
-      el.roleSelect.addEventListener("change", () => {
-        currentRole = el.roleSelect.value;
-        if (currentRole === "employee") {
-          el.assignee.value = currentUser;
+            el.roleSelect.addEventListener("change", onRoleChangeRequest);
+
+      el.authConfirmBtn.addEventListener("click", confirmRoleChange);
+      el.authCancelBtn.addEventListener("click", cancelRoleChange);
+      el.authModalCloseBtn.addEventListener("click", cancelRoleChange);
+
+      el.authPasswordInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          confirmRoleChange();
         }
-        updateRoleUI();
-        render();
+        if (event.key === "Escape") {
+          cancelRoleChange();
+        }
+      });
+
+      el.authModalBackdrop.addEventListener("click", (event) => {
+        if (event.target === el.authModalBackdrop) {
+          cancelRoleChange();
+        }
       });
 
       [el.searchInput, el.filterPerson, el.filterGroup, el.filterStatus, el.periodFrom, el.periodTo, el.sortBy, el.sortDirection]
         .forEach(node => node.addEventListener("input", render));
+    }
+
+    function onRoleChangeRequest() {
+      const selectedRole = el.roleSelect.value;
+
+      if (selectedRole === currentRole) {
+        return;
+      }
+
+      pendingRole = selectedRole;
+
+      // Beim Wechsel auf Gast kein Passwort nötig:
+      // einfach "ausloggen" und Gast setzen.
+      if (selectedRole === "guest") {
+        applyRoleChange("guest");
+        return;
+      }
+
+      openAuthModal(selectedRole);
+    }
+
+    function openAuthModal(roleKey) {
+      const roleLabel = roles[roleKey]?.label || roleKey;
+      el.authModalText.textContent = `Bitte Passwort eingeben, um zur Rolle „${roleLabel}“ zu wechseln.`;
+      el.authPasswordInput.value = "";
+      el.authError.classList.add("hidden");
+      el.authModalBackdrop.classList.remove("hidden");
+
+      requestAnimationFrame(() => {
+        el.authPasswordInput.focus();
+      });
+    }
+
+    function closeAuthModal() {
+      el.authModalBackdrop.classList.add("hidden");
+      el.authPasswordInput.value = "";
+      el.authError.classList.add("hidden");
+    }
+
+    function confirmRoleChange() {
+      if (!pendingRole) {
+        closeAuthModal();
+        return;
+      }
+
+      const enteredPassword = el.authPasswordInput.value.trim();
+
+      if (enteredPassword !== ROLE_PASSWORD) {
+        el.authError.classList.remove("hidden");
+        el.authPasswordInput.focus();
+        el.authPasswordInput.select();
+        return;
+      }
+
+      applyRoleChange(pendingRole);
+      closeAuthModal();
+    }
+
+    function cancelRoleChange() {
+      pendingRole = null;
+      el.roleSelect.value = currentRole;
+      closeAuthModal();
+    }
+
+    function applyRoleChange(newRole) {
+      currentRole = newRole;
+      pendingRole = null;
+
+      if (currentRole === "employee") {
+        el.assignee.value = currentUser;
+      } else if (currentRole === "guest") {
+        el.assignee.value = people[0];
+      }
+
+      if (editTaskId && !canEditTask(getTaskById(editTaskId))) {
+        resetForm();
+      }
+
+      updateRoleUI();
+      render();
     }
 
     function updateRoleUI() {
@@ -774,11 +973,13 @@
       el.roleBannerText.textContent = role.description;
       el.rolePill.textContent = role.label;
 
-      const canCreate = role.canCreate;
+            const canUseForm = editTaskId ? role.canEdit : role.canCreate;
+
       [el.title, el.description, el.assignee, el.priority, el.status, el.startDate, el.deadline, el.parentTask].forEach(input => {
-        input.disabled = !canCreate && !editTaskId;
+        input.disabled = !canUseForm;
       });
-      el.saveTaskBtn.disabled = !canCreate && !editTaskId;
+
+      el.saveTaskBtn.disabled = !canUseForm;
     }
 
     function onSaveTask() {
