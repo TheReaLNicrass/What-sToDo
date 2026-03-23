@@ -51,7 +51,7 @@
 | **Datenbank** | PostgreSQL |
 | **Authentifizierung** | bcrypt (Passwort-Hashing) |
 | **API-Testing** | Postman / Bruno |
-| **Testing** | Node Test Runner |
+| **Testing** | Node.js Native Test Runner |
 
 ---
 
@@ -89,9 +89,6 @@ What-sToDo/
 
 ## 🌐 API Endpunkte
 
-### Health
-- `GET /api/health`
-
 ### Auth
 - `POST /api/auth/register`
 - `POST /api/auth/login`
@@ -99,7 +96,7 @@ What-sToDo/
 
 ### Users
 - `GET /api/users`
-- `GET /api/users/:userId`
+- `POST /api/users`
 
 ### Projects
 - `GET /api/projects`
@@ -121,13 +118,14 @@ What-sToDo/
 - `PUT /api/tasks/:taskId`
 - `DELETE /api/tasks/:taskId`
 - `GET /api/tasks/:taskId/subtasks`
----
 
 ### Task Assignees
 - `GET /api/tasks/:taskId/assignees`
 - `POST /api/tasks/:taskId/assignees`
 - `PUT /api/tasks/:taskId/assignees`
 - `DELETE /api/tasks/:taskId/assignees/:userId`
+
+---
 
 ## 🗃️ Datenbankschema
 
