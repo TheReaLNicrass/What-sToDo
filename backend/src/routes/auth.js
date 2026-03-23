@@ -1,5 +1,6 @@
 const express = require('express');
 const { asyncHandler } = require('../utils/http');
+const { createSessionCookie, clearSessionCookie, readSessionUserId } = require('../utils/session');
 
 function buildAuthRouter(service) {
   const router = express.Router();
@@ -10,15 +11,23 @@ function buildAuthRouter(service) {
   }));
 
   router.post('/login', asyncHandler(async (req, res) => {
-    const session = await service.login(req.body || {});
-    res.json(session);
+    const user = await service.login(req.body || {});
+    res.setHeader('Set-Cookie', createSessionCookie(user.id));
+    res.json({ user });
   }));
 
   router.post('/logout', asyncHandler(async (req, res) => {
-    const auth = req.headers.authorization || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-    service.logout(token);
+    const userId = readSessionUserId(req.headers.cookie || '');
+    await service.logout?.(userId);
+    res.setHeader('Set-Cookie', clearSessionCookie());
     res.status(204).send();
+  }));
+
+  router.get('/me', asyncHandler(async (req, res) => {
+    const userId = readSessionUserId(req.headers.cookie || '');
+    if (!userId) return res.status(401).json({ error: 'Authentifizierung erforderlich.' });
+    const user = await service.getUserById(userId);
+    return res.json({ user });
   }));
 
   return router;
