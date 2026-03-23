@@ -1,0 +1,58 @@
+{
+  "users": [
+    {
+      "id": "7cc28252-c6c6-4ede-9cc3-0f30612cfa23",
+      "name": "Admin Demo",
+      "email": "admin@example.com",
+      "passwordHash": "",
+      "globalRole": "admin",
+      "createdAt": "2026-03-23T17:15:18.920Z"
+    },
+    {
+      "id": "34fcf685-f7f2-4ddd-a5be-35a72cbf445e",
+      "name": "Mitarbeiter Demo",
+      "email": "employee@example.com",
+      "passwordHash": "",
+      "globalRole": "employee",
+      "createdAt": "2026-03-23T17:15:18.920Z"
+    }
+  ],
+  "projects": [
+    {
+      "id": "584afe94-89e5-4e02-a81f-3504bb96a073",
+      "name": "Website Relaunch",
+      "description": "Migration von Frontend und Backend auf eine gemeinsame API.",
+      "createdBy": "7cc28252-c6c6-4ede-9cc3-0f30612cfa23",
+      "createdAt": "2026-03-23T17:15:18.920Z",
+      "members": [
+        {
+          "userId": "7cc28252-c6c6-4ede-9cc3-0f30612cfa23",
+          "role": "admin"
+        },
+        {
+          "userId": "34fcf685-f7f2-4ddd-a5be-35a72cbf445e",
+          "role": "employee"
+        }
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "9be01f3b-47bc-46ff-8bb3-a81acfa7871e",
+      "projectId": "584afe94-89e5-4e02-a81f-3504bb96a073",
+      "parentTaskId": null,
+      "title": "API mit Frontend verbinden",
+      "description": "Daten aus dem Backend laden und Formular dynamisch befüllen.",
+      "status": "in_progress",
+      "priority": "high",
+      "createdBy": "7cc28252-c6c6-4ede-9cc3-0f30612cfa23",
+      "assigneeIds": [
+        "34fcf685-f7f2-4ddd-a5be-35a72cbf445e"
+      ],
+      "dueDate": "2026-03-30",
+      "createdAt": "2026-03-23T17:15:18.920Z",
+      "updatedAt": "2026-03-23T17:15:18.920Z"
+    }
+  ],
+  "sessions": []
+}
