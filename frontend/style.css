@@ -11,173 +11,155 @@
   --warn: #f59e0b;
   --danger: #ef4444;
 }
-
 * {
   box-sizing: border-box;
 }
-
 body {
   margin: 0;
   font-family: Inter, system-ui, sans-serif;
   background: linear-gradient(180deg, var(--bg), #101828);
   color: var(--text);
 }
-
 .layout {
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: 380px 1fr;
   min-height: 100vh;
 }
-
 .sidebar,
 .content {
   padding: 24px;
 }
-
 .sidebar {
   background: rgba(8, 17, 31, 0.72);
   border-right: 1px solid var(--line);
 }
-
-.card {
+.card,
+.task,
+.stat,
+.list-row {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 18px;
-  padding: 18px;
-  margin-bottom: 16px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
 }
-
+.card {
+  padding: 18px;
+  margin-bottom: 16px;
+}
 h1,
 h2,
 h3,
 p {
   margin-top: 0;
 }
-
 .muted {
   color: var(--muted);
 }
-
 .grid {
   display: grid;
   gap: 12px;
 }
-
 .two {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
 }
-
-.three {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-input,
-select,
-textarea,
-button {
-  font: inherit;
-  border-radius: 12px;
-}
-
-input,
-select,
-textarea {
-  width: 100%;
-  padding: 10px 12px;
-  background: var(--panel2);
-  color: var(--text);
-  border: 1px solid var(--line);
-}
-
-textarea {
-  min-height: 84px;
-  resize: vertical;
-}
-
-button {
-  padding: 10px 14px;
-  border: 0;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: white;
-}
-
-.secondary {
-  background: #23314d;
-  color: var(--text);
-}
-
-.danger {
-  background: #401517;
-  color: #fecaca;
-}
-
 .row {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
-
+.between {
+  justify-content: space-between;
+  align-items: center;
+}
+input,
+select,
+textarea,
+button {
+  width: 100%;
+  font: inherit;
+  border-radius: 12px;
+}
+input,
+select,
+textarea {
+  padding: 10px 12px;
+  background: var(--panel2);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+button {
+  width: auto;
+  padding: 10px 14px;
+  border: 0;
+  cursor: pointer;
+  font-weight: 700;
+}
+button.mini {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+}
+.secondary {
+  background: #23314d;
+  color: var(--text);
+}
+.danger {
+  background: #401517;
+  color: #fecaca;
+}
 .stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin: 16px 0;
 }
-
 .stat {
-  background: var(--panel);
-  border: 1px solid var(--line);
   padding: 14px;
-  border-radius: 16px;
 }
-
 .stat strong {
   display: block;
   font-size: 1.5rem;
 }
-
 .project-list button {
-  width: 100%;
-  text-align: left;
   margin-bottom: 8px;
+  text-align: left;
 }
-
 .project-list button.active {
   outline: 2px solid var(--accent);
 }
-
+.list-row {
+  padding: 14px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
 .task {
-  border: 1px solid var(--line);
-  background: var(--panel);
   border-left: 6px solid var(--accent);
-  border-radius: 16px;
   padding: 14px;
   margin-bottom: 12px;
 }
-
 .task[data-priority="high"] {
   border-left-color: var(--danger);
 }
-
 .task[data-priority="medium"] {
   border-left-color: var(--warn);
 }
-
 .task[data-priority="low"] {
   border-left-color: var(--ok);
 }
-
 .children {
   margin-left: 20px;
   margin-top: 10px;
 }
-
 .pill {
   display: inline-block;
   padding: 4px 8px;
@@ -188,30 +170,26 @@ button {
   margin-right: 6px;
   margin-top: 6px;
 }
-
+.error,
+.success {
+  padding: 10px;
+  border-radius: 12px;
+  display: none;
+}
 .error {
   color: #fecaca;
   background: #401517;
-  padding: 10px;
-  border-radius: 12px;
-  display: none;
 }
-
 .success {
   color: #bbf7d0;
   background: #0f2d1d;
-  padding: 10px;
-  border-radius: 12px;
-  display: none;
 }
-
-@media (max-width: 980px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-  
+code {
+  color: #bfdbfe;
+}
+@media (max-width: 1100px) {
+  .layout,
   .stats,
-  .three,
   .two {
     grid-template-columns: 1fr;
   }

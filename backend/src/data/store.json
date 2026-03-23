@@ -1,57 +1,80 @@
 {
   "users": [
     {
-      "id": "7cc28252-c6c6-4ede-9cc3-0f30612cfa23",
+      "id": "bc84c197-549d-4908-8e90-b0ab56355e4f",
       "name": "Admin Demo",
       "email": "admin@example.com",
-      "passwordHash": "",
-      "globalRole": "admin",
-      "createdAt": "2026-03-23T17:15:18.920Z"
+      "password": "",
+      "created_at": "2026-03-23T18:30:31.581Z"
     },
     {
-      "id": "34fcf685-f7f2-4ddd-a5be-35a72cbf445e",
+      "id": "401ae73e-f146-47cb-9a21-118e27fead1d",
       "name": "Mitarbeiter Demo",
       "email": "employee@example.com",
-      "passwordHash": "",
-      "globalRole": "employee",
-      "createdAt": "2026-03-23T17:15:18.920Z"
+      "password": "",
+      "created_at": "2026-03-23T18:30:31.581Z"
     }
   ],
   "projects": [
     {
-      "id": "584afe94-89e5-4e02-a81f-3504bb96a073",
+      "id": "bf23b25a-3a47-4bb8-9716-3aae5c864300",
       "name": "Website Relaunch",
       "description": "Migration von Frontend und Backend auf eine gemeinsame API.",
-      "createdBy": "7cc28252-c6c6-4ede-9cc3-0f30612cfa23",
-      "createdAt": "2026-03-23T17:15:18.920Z",
-      "members": [
-        {
-          "userId": "7cc28252-c6c6-4ede-9cc3-0f30612cfa23",
-          "role": "admin"
-        },
-        {
-          "userId": "34fcf685-f7f2-4ddd-a5be-35a72cbf445e",
-          "role": "employee"
-        }
-      ]
+      "owner_id": "bc84c197-549d-4908-8e90-b0ab56355e4f",
+      "created_at": "2026-03-23T18:30:31.581Z",
+      "deadline": "2026-04-06"
+    }
+  ],
+  "project_members": [
+    {
+      "project_id": "bf23b25a-3a47-4bb8-9716-3aae5c864300",
+      "user_id": "bc84c197-549d-4908-8e90-b0ab56355e4f",
+      "role": 2,
+      "joined_at": "2026-03-23T18:30:31.581Z"
+    },
+    {
+      "project_id": "bf23b25a-3a47-4bb8-9716-3aae5c864300",
+      "user_id": "401ae73e-f146-47cb-9a21-118e27fead1d",
+      "role": 1,
+      "joined_at": "2026-03-23T18:30:31.581Z"
     }
   ],
   "tasks": [
     {
-      "id": "9be01f3b-47bc-46ff-8bb3-a81acfa7871e",
-      "projectId": "584afe94-89e5-4e02-a81f-3504bb96a073",
-      "parentTaskId": null,
+      "id": "03598c8f-1ad0-4861-a747-be1167280c9a",
+      "project_id": "bf23b25a-3a47-4bb8-9716-3aae5c864300",
+      "parent_id": null,
       "title": "API mit Frontend verbinden",
       "description": "Daten aus dem Backend laden und Formular dynamisch befüllen.",
+      "priority": 2,
       "status": "in_progress",
-      "priority": "high",
-      "createdBy": "7cc28252-c6c6-4ede-9cc3-0f30612cfa23",
-      "assigneeIds": [
-        "34fcf685-f7f2-4ddd-a5be-35a72cbf445e"
-      ],
-      "dueDate": "2026-03-30",
-      "createdAt": "2026-03-23T17:15:18.920Z",
-      "updatedAt": "2026-03-23T17:15:18.920Z"
+      "creator_id": "bc84c197-549d-4908-8e90-b0ab56355e4f",
+      "deadline": "2026-03-30",
+      "created_at": "2026-03-23T18:30:31.581Z"
+    },
+    {
+      "id": "096365e2-36de-44d7-88a8-d4cce76f110a",
+      "project_id": "bf23b25a-3a47-4bb8-9716-3aae5c864300",
+      "parent_id": "03598c8f-1ad0-4861-a747-be1167280c9a",
+      "title": "Task-Maske testen",
+      "description": "Subtasks und Assignees im UI prüfen.",
+      "priority": 1,
+      "status": "todo",
+      "creator_id": "401ae73e-f146-47cb-9a21-118e27fead1d",
+      "deadline": null,
+      "created_at": "2026-03-23T18:30:31.581Z"
+    }
+  ],
+  "task_assignees": [
+    {
+      "task_id": "03598c8f-1ad0-4861-a747-be1167280c9a",
+      "user_id": "401ae73e-f146-47cb-9a21-118e27fead1d",
+      "assigned_at": "2026-03-23T18:30:31.581Z"
+    },
+    {
+      "task_id": "096365e2-36de-44d7-88a8-d4cce76f110a",
+      "user_id": "bc84c197-549d-4908-8e90-b0ab56355e4f",
+      "assigned_at": "2026-03-23T18:30:31.581Z"
     }
   ],
   "sessions": []

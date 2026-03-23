@@ -54,5 +54,16 @@
       "updatedAt": "2026-03-23T17:45:40.539Z"
     }
   ],
-  "sessions": []
+  "sessions": [
+    {
+      "token": "07da2168-eb09-481f-bd22-acc2810e9deb",
+      "user_id": "cbe9465d-298b-4a95-ae8f-bfcaaaeaf00a",
+      "created_at": "2026-03-23T18:47:52.784Z"
+    },
+    {
+      "token": "3039bd22-56fd-4d8f-a1cd-22d623f0c037",
+      "user_id": "cbe9465d-298b-4a95-ae8f-bfcaaaeaf00a",
+      "created_at": "2026-03-23T18:48:36.849Z"
+    }
+  ]
 }

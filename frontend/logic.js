@@ -1,328 +1,343 @@
 const state = {
-  apiUrl: localStorage.getItem("apiUrl") || "http://localhost:3000/api",
-  token: localStorage.getItem("token") || "",
-  user: JSON.parse(localStorage.getItem("user") || "null"),
+  apiUrl: localStorage.getItem('apiUrl') || `${location.origin}/api`,
+  token: localStorage.getItem('token') || '',
+  user: JSON.parse(localStorage.getItem('user') || 'null'),
   users: [],
   projects: [],
-  selectedProjectId: null,
+  members: [],
   tasks: [],
+  selectedProjectId: null,
 };
-const el = Object.fromEntries(
-  [
-    "apiUrl",
-    "registerName",
-    "authEmail",
-    "authPassword",
-    "registerBtn",
-    "loginBtn",
-    "logoutBtn",
-    "projectName",
-    "projectDescription",
-    "projectMembers",
-    "createProjectBtn",
-    "taskTitle",
-    "taskDescription",
-    "taskPriority",
-    "taskStatus",
-    "taskDueDate",
-    "taskParent",
-    "taskAssignees",
-    "createTaskBtn",
-    "welcomeText",
-    "stats",
-    "projectList",
-    "taskList",
-    "selectedProjectMeta",
-    "authMessage",
-    "authError",
-  ].map((id) => [id, document.getElementById(id)]),
-);
+
+const ids = [
+  'apiUrl','registerName','authEmail','authPassword','registerBtn','loginBtn','logoutBtn','projectName','projectDescription','projectDeadline',
+  'projectMembers','createProjectBtn','updateProjectBtn','deleteProjectBtn','memberUser','memberRole','addMemberBtn','updateMemberBtn','removeMemberBtn',
+  'taskId','taskTitle','taskDescription','taskPriority','taskStatus','taskDueDate','taskParent','taskAssignees','createTaskBtn','loadTaskBtn','deleteTaskBtn',
+  'welcomeText','stats','projectList','memberList','taskList','selectedProjectMeta','authMessage','authError'
+];
+const el = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
 el.apiUrl.value = state.apiUrl;
 
 function showMessage(target, text) {
   target.textContent = text;
-  target.style.display = text ? "block" : "none";
+  target.style.display = text ? 'block' : 'none';
 }
-function escapeHtml(v = "") {
-  return v.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ],
-  );
+function escapeHtml(value = '') {
+  return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
 async function api(path, options = {}) {
-  state.apiUrl = el.apiUrl.value.trim().replace(/\/$/, "");
-  localStorage.setItem("apiUrl", state.apiUrl);
+  state.apiUrl = el.apiUrl.value.trim().replace(/\/$/, '');
+  localStorage.setItem('apiUrl', state.apiUrl);
   const response = await fetch(`${state.apiUrl}${path}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(state.token ? { Authorization: `Bearer ${state.token}` } : {}),
       ...(options.headers || {}),
     },
   });
   if (response.status === 204) return null;
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || "API-Fehler");
+  if (!response.ok) throw new Error(data.error || 'API-Fehler');
   return data;
 }
-async function bootstrap() {
-  renderAuthState();
-  if (!state.token) return renderEmpty();
-  try {
-    await Promise.all([loadUsers(), loadProjects()]);
-  } catch (error) {
-    showMessage(el.authError, error.message);
-  }
+function persistAuth() {
+  localStorage.setItem('token', state.token);
+  localStorage.setItem('user', JSON.stringify(state.user));
 }
-function renderAuthState() {
-  el.welcomeText.textContent = state.user
-    ? `Angemeldet als ${state.user.name} (${state.user.email}).`
-    : "Bitte einloggen, um Projekte und Tasks zu laden.";
+function flattenTasks(tasks) {
+  return tasks.flatMap((task) => [task, ...flattenTasks(task.subtasks || [])]);
 }
-function renderEmpty() {
-  el.stats.innerHTML = "";
-  el.projectList.innerHTML = '<p class="muted">Noch keine Daten geladen.</p>';
-  el.taskList.innerHTML = "";
-  el.selectedProjectMeta.textContent = "";
-}
-async function loadUsers() {
-  const { users } = await api("/users");
-  state.users = users;
-  populateUserSelects();
+function resetTaskForm() {
+  ['taskId', 'taskTitle', 'taskDescription', 'taskDueDate'].forEach((key) => { el[key].value = ''; });
+  el.taskPriority.value = 'medium';
+  el.taskStatus.value = 'todo';
+  el.taskParent.value = '';
+  [...el.taskAssignees.options].forEach((option) => { option.selected = false; });
 }
 function populateUserSelects() {
-  const options = state.users
-    .map(
-      (user) =>
-        `<option value="${user.id}">${escapeHtml(user.name)} (${escapeHtml(user.globalRole)})</option>`,
-    )
-    .join("");
-  el.projectMembers.innerHTML = options;
-  el.taskAssignees.innerHTML = options;
+  const allUsers = state.users.map((user) => `<option value="${user.id}">${escapeHtml(user.name)} (${escapeHtml(user.email)})</option>`).join('');
+  el.projectMembers.innerHTML = allUsers;
+  el.memberUser.innerHTML = `<option value="">Bitte wählen</option>${allUsers}`;
+  const projectUserIds = new Set(state.members.map((member) => member.user.id));
+  el.taskAssignees.innerHTML = state.users
+    .filter((user) => projectUserIds.size === 0 || projectUserIds.has(user.id))
+    .map((user) => `<option value="${user.id}">${escapeHtml(user.name)}</option>`)
+    .join('');
 }
-async function loadProjects() {
-  const { projects } = await api("/projects");
-  state.projects = projects;
-  state.selectedProjectId =
-    state.selectedProjectId &&
-    projects.some((p) => p.id === state.selectedProjectId)
-      ? state.selectedProjectId
-      : projects[0]?.id || null;
-  renderProjects();
-  updateStats();
-  if (state.selectedProjectId) await loadTasks(state.selectedProjectId);
-  else renderTasks([]);
-}
-async function loadTasks(projectId) {
-  const { tasks } = await api(`/projects/${projectId}/tasks`);
-  state.tasks = tasks;
-  renderTasks(tasks);
-  populateParentSelect(tasks);
-  renderSelectedProjectMeta();
+function populateParentSelect() {
+  const options = flattenTasks(state.tasks)
+    .map((task) => `<option value="${task.id}">${escapeHtml(task.title)}</option>`)
+    .join('');
+  el.taskParent.innerHTML = `<option value="">Kein Parent</option>${options}`;
 }
 function updateStats() {
-  const totalTasks = countTasks(state.tasks);
-  const projects = state.projects.length;
-  const admins = state.projects.filter((project) =>
-    project.members.some(
-      (member) => member.user.id === state.user?.id && member.role === "admin",
-    ),
-  ).length;
-  const assigned = flattenTasks(state.tasks).filter(
-    (task) => task.assignees.length,
-  ).length;
+  const flatTasks = flattenTasks(state.tasks);
   el.stats.innerHTML = [
-    ["Projekte", projects],
-    ["Tasks", totalTasks],
-    ["Admin-Projekte", admins],
-    ["Zugewiesen", assigned],
-  ]
-    .map(
-      ([label, value]) =>
-        `<div class="stat"><span class="muted">${label}</span><strong>${value}</strong></div>`,
-    )
-    .join("");
+    ['Projekte', state.projects.length],
+    ['Mitglieder', state.members.length],
+    ['Tasks', flatTasks.length],
+    ['Offen', flatTasks.filter((task) => task.status !== 'done').length],
+  ].map(([label, value]) => `<div class="stat"><span class="muted">${label}</span><strong>${value}</strong></div>`).join('');
+}
+function renderAuthState() {
+  el.welcomeText.textContent = state.user ? `Angemeldet als ${state.user.name} (${state.user.email}).` : 'Bitte einloggen, um Projekte und Tasks zu laden.';
 }
 function renderProjects() {
   if (!state.projects.length) {
     el.projectList.innerHTML = '<p class="muted">Keine Projekte vorhanden.</p>';
     return;
   }
-  el.projectList.innerHTML = state.projects
-    .map((project) => {
-      const myRole =
-        project.members.find((member) => member.user.id === state.user.id)
-          ?.role || "guest";
-      const creator = project.createdBy?.name || "Unbekannt";
-      return `<button class="secondary ${project.id === state.selectedProjectId ? "active" : ""}" data-project-id="${project.id}"><strong>${escapeHtml(project.name)}</strong><br><span class="muted">Erstellt von ${escapeHtml(creator)} · Rolle: ${escapeHtml(myRole)} · Mitglieder: ${project.members.length} · Tasks: ${project.taskCount}</span></button>`;
-    })
-    .join("");
-  [...el.projectList.querySelectorAll("[data-project-id]")].forEach(
-    (btn) =>
-      (btn.onclick = async () => {
-        state.selectedProjectId = btn.dataset.projectId;
-        await loadTasks(state.selectedProjectId);
-        renderProjects();
-        updateStats();
-      }),
-  );
+  el.projectList.innerHTML = state.projects.map((project) => `
+    <button class="secondary ${project.id === state.selectedProjectId ? 'active' : ''}" data-project-id="${project.id}">
+      <strong>${escapeHtml(project.name)}</strong><br />
+      <span class="muted">Owner: ${escapeHtml(project.owner?.name || 'Unbekannt')} · Rolle: ${escapeHtml(project.role)} · Tasks: ${project.taskCount} · Deadline: ${escapeHtml(project.deadline || 'offen')}</span>
+    </button>`).join('');
+  [...el.projectList.querySelectorAll('[data-project-id]')].forEach((button) => {
+    button.onclick = async () => {
+      state.selectedProjectId = button.dataset.projectId;
+      await loadProjectContext();
+    };
+  });
 }
-function renderSelectedProjectMeta() {
-  const project = state.projects.find((p) => p.id === state.selectedProjectId);
-  el.selectedProjectMeta.textContent = project
-    ? `${project.name} · Erstellt von ${project.createdBy?.name || "Unbekannt"}`
-    : "";
-}
-function renderTasks(tasks) {
-  if (!tasks.length) {
-    el.taskList.innerHTML =
-      '<p class="muted">Keine Tasks für das gewählte Projekt.</p>';
+function renderMembers() {
+  if (!state.selectedProjectId) {
+    el.memberList.innerHTML = '<p class="muted">Bitte zuerst ein Projekt auswählen.</p>';
     return;
   }
-  el.taskList.innerHTML = tasks.map(renderTaskCard).join("");
+  el.memberList.innerHTML = state.members.map((member) => `<div class="list-row"><div><strong>${escapeHtml(member.user.name)}</strong><div class="muted">${escapeHtml(member.user.email)} · seit ${escapeHtml((member.joinedAt || '').slice(0, 10))}</div></div><span class="pill">${escapeHtml(member.role)}</span></div>`).join('') || '<p class="muted">Keine Mitglieder vorhanden.</p>';
 }
-function renderTaskCard(task) {
-  const assignees = task.assignees.length
-    ? task.assignees
-        .map((user) => `<span class="pill">${escapeHtml(user.name)}</span>`)
-        .join("")
-    : '<span class="pill">Nicht zugewiesen</span>';
-  const children = task.children.length
-    ? `<div class="children">${task.children.map(renderTaskCard).join("")}</div>`
-    : "";
-  return `<div class="task" data-priority="${task.priority}"><div class="row" style="justify-content:space-between"><strong>${escapeHtml(task.title)}</strong><span class="pill">${escapeHtml(task.status)}</span></div><p>${escapeHtml(task.description || "Keine Beschreibung")}</p><div class="muted">Erstellt von ${escapeHtml(task.createdBy?.name || "Unbekannt")} · Fällig: ${escapeHtml(task.dueDate || "offen")}</div><div>${assignees}</div>${children}</div>`;
+function renderTask(task) {
+  const assignees = task.assignees.length ? task.assignees.map((user) => `<span class="pill">${escapeHtml(user.name)}</span>`).join('') : '<span class="pill">Nicht zugewiesen</span>';
+  const subtasks = task.subtasks?.length ? `<div class="children">${task.subtasks.map(renderTask).join('')}</div>` : '';
+  return `<div class="task" data-priority="${escapeHtml(task.priority)}">
+    <div class="row between"><strong>${escapeHtml(task.title)}</strong><div class="row"><span class="pill">${escapeHtml(task.status)}</span><button class="secondary mini" data-load-task="${task.id}">Laden</button></div></div>
+    <p>${escapeHtml(task.description || 'Keine Beschreibung')}</p>
+    <div class="muted">Erstellt von ${escapeHtml(task.createdBy?.name || 'Unbekannt')} · Fällig: ${escapeHtml(task.dueDate || 'offen')}</div>
+    <div>${assignees}</div>
+    ${subtasks}
+  </div>`;
 }
-function flattenTasks(tasks) {
-  return tasks.flatMap((task) => [task, ...flattenTasks(task.children || [])]);
+function renderTasks() {
+  if (!state.selectedProjectId) {
+    el.taskList.innerHTML = '<p class="muted">Bitte zuerst ein Projekt auswählen.</p>';
+    return;
+  }
+  el.taskList.innerHTML = state.tasks.length ? state.tasks.map(renderTask).join('') : '<p class="muted">Keine Tasks vorhanden.</p>';
+  [...el.taskList.querySelectorAll('[data-load-task]')].forEach((button) => {
+    button.onclick = () => loadTaskIntoForm(button.dataset.loadTask);
+  });
 }
-function countTasks(tasks) {
-  return flattenTasks(tasks).length;
+function hydrateProjectForm(project) {
+  el.projectName.value = project?.name || '';
+  el.projectDescription.value = project?.description || '';
+  el.projectDeadline.value = project?.deadline || '';
+  [...el.projectMembers.options].forEach((option) => {
+    option.selected = false;
+  });
 }
-function populateParentSelect(tasks) {
-  const flat = flattenTasks(tasks);
-  el.taskParent.innerHTML =
-    '<option value="">Kein Parent</option>' +
-    flat
-      .map(
-        (task) =>
-          `<option value="${task.id}">${escapeHtml(task.title)}</option>`,
-      )
-      .join("");
+async function loadUsers() {
+  const { users } = await api('/users');
+  state.users = users;
+}
+async function loadProjects() {
+  const { projects } = await api('/projects');
+  state.projects = projects;
+  if (!state.selectedProjectId || !projects.some((project) => project.id === state.selectedProjectId)) {
+    state.selectedProjectId = projects[0]?.id || null;
+  }
+  renderProjects();
+}
+async function loadProjectContext() {
+  if (!state.selectedProjectId) {
+    state.members = [];
+    state.tasks = [];
+    renderMembers();
+    renderTasks();
+    updateStats();
+    return;
+  }
+  const [projectResponse, membersResponse, tasksResponse] = await Promise.all([
+    api(`/projects/${state.selectedProjectId}`),
+    api(`/projects/${state.selectedProjectId}/members`),
+    api(`/projects/${state.selectedProjectId}/tasks`),
+  ]);
+  const project = projectResponse.project;
+  state.members = membersResponse.members;
+  state.tasks = tasksResponse.tasks;
+  el.selectedProjectMeta.textContent = `${project.name} · Owner: ${project.owner?.name || 'Unbekannt'} · Rolle: ${project.role}`;
+  hydrateProjectForm(project);
+  populateUserSelects();
+  populateParentSelect();
+  renderProjects();
+  renderMembers();
+  renderTasks();
+  updateStats();
+}
+async function bootstrap() {
+  renderAuthState();
+  if (!state.token) {
+    renderProjects();
+    renderMembers();
+    renderTasks();
+    return;
+  }
+  try {
+    await loadUsers();
+    await loadProjects();
+    populateUserSelects();
+    await loadProjectContext();
+  } catch (error) {
+    showMessage(el.authError, error.message);
+  }
 }
 async function register() {
   try {
-    const payload = {
-      name: el.registerName.value.trim(),
-      email: el.authEmail.value.trim(),
-      password: el.authPassword.value,
-    };
-    await api("/auth/register", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    showMessage(
-      el.authMessage,
-      "Registrierung erfolgreich. Du kannst dich jetzt anmelden.",
-    );
-    showMessage(el.authError, "");
+    await api('/auth/register', { method: 'POST', body: JSON.stringify({ name: el.registerName.value.trim(), email: el.authEmail.value.trim(), password: el.authPassword.value }) });
+    showMessage(el.authMessage, 'Registrierung erfolgreich.');
+    showMessage(el.authError, '');
   } catch (error) {
     showMessage(el.authError, error.message);
   }
 }
 async function login() {
   try {
-    const payload = {
-      email: el.authEmail.value.trim(),
-      password: el.authPassword.value,
-    };
-    const data = await api("/auth/login", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    const data = await api('/auth/login', { method: 'POST', body: JSON.stringify({ email: el.authEmail.value.trim(), password: el.authPassword.value }) });
     state.token = data.token;
     state.user = data.user;
-    localStorage.setItem("token", state.token);
-    localStorage.setItem("user", JSON.stringify(state.user));
-    showMessage(el.authMessage, "Login erfolgreich.");
-    showMessage(el.authError, "");
+    persistAuth();
     renderAuthState();
-    await Promise.all([loadUsers(), loadProjects()]);
+    showMessage(el.authMessage, 'Login erfolgreich.');
+    showMessage(el.authError, '');
+    await loadUsers();
+    await loadProjects();
+    populateUserSelects();
+    await loadProjectContext();
   } catch (error) {
     showMessage(el.authError, error.message);
   }
 }
 async function logout() {
-  try {
-    await api("/auth/logout", { method: "POST" });
-  } catch (_) {}
-  state.token = "";
+  try { await api('/auth/logout', { method: 'POST' }); } catch {}
+  state.token = '';
   state.user = null;
   state.projects = [];
+  state.members = [];
   state.tasks = [];
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  persistAuth();
   renderAuthState();
-  renderEmpty();
+  renderProjects();
+  renderMembers();
+  renderTasks();
+  updateStats();
 }
-async function createProject() {
+async function saveProject() {
+  const payload = { name: el.projectName.value.trim(), description: el.projectDescription.value.trim(), deadline: el.projectDeadline.value || null };
   try {
-    const members = [...el.projectMembers.selectedOptions].map((option) => ({
-      userId: option.value,
-      role: "employee",
-    }));
-    const payload = {
-      name: el.projectName.value.trim(),
-      description: el.projectDescription.value.trim(),
-      members,
-    };
-    await api("/projects", { method: "POST", body: JSON.stringify(payload) });
-    el.projectName.value = "";
-    el.projectDescription.value = "";
-    [...el.projectMembers.options].forEach(
-      (option) => (option.selected = false),
-    );
+    if (state.selectedProjectId) {
+      await api(`/projects/${state.selectedProjectId}`, { method: 'PUT', body: JSON.stringify(payload) });
+    } else {
+      payload.members = [...el.projectMembers.selectedOptions].map((option) => ({ userId: option.value, role: 'employee' }));
+      const { project } = await api('/projects', { method: 'POST', body: JSON.stringify(payload) });
+      state.selectedProjectId = project.id;
+    }
     await loadProjects();
+    await loadProjectContext();
   } catch (error) {
     showMessage(el.authError, error.message);
   }
 }
-async function createTask() {
+async function deleteProject() {
+  if (!state.selectedProjectId) return;
   try {
-    const assigneeIds = [...el.taskAssignees.selectedOptions].map(
-      (option) => option.value,
-    );
-    const payload = {
-      title: el.taskTitle.value.trim(),
-      description: el.taskDescription.value.trim(),
-      priority: el.taskPriority.value,
-      status: el.taskStatus.value,
-      dueDate: el.taskDueDate.value || null,
-      parentTaskId: el.taskParent.value || null,
-      assigneeIds,
-    };
-    await api(`/projects/${state.selectedProjectId}/tasks`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    ["taskTitle", "taskDescription", "taskDueDate"].forEach(
-      (id) => (el[id].value = ""),
-    );
-    [...el.taskAssignees.options].forEach(
-      (option) => (option.selected = false),
-    );
-    el.taskParent.value = "";
-    await loadTasks(state.selectedProjectId);
-    updateStats();
+    await api(`/projects/${state.selectedProjectId}`, { method: 'DELETE' });
+    state.selectedProjectId = null;
+    hydrateProjectForm(null);
+    await loadProjects();
+    await loadProjectContext();
   } catch (error) {
     showMessage(el.authError, error.message);
   }
 }
+async function modifyMember(action) {
+  if (!state.selectedProjectId || !el.memberUser.value) return;
+  try {
+    if (action === 'add') {
+      await api(`/projects/${state.selectedProjectId}/members`, { method: 'POST', body: JSON.stringify({ userId: el.memberUser.value, role: el.memberRole.value }) });
+    } else if (action === 'update') {
+      await api(`/projects/${state.selectedProjectId}/members/${el.memberUser.value}`, { method: 'PUT', body: JSON.stringify({ role: el.memberRole.value }) });
+    } else {
+      await api(`/projects/${state.selectedProjectId}/members/${el.memberUser.value}`, { method: 'DELETE' });
+    }
+    await loadProjects();
+    await loadProjectContext();
+  } catch (error) {
+    showMessage(el.authError, error.message);
+  }
+}
+async function loadTaskIntoForm(taskId = el.taskId.value.trim()) {
+  if (!taskId) return;
+  try {
+    const { task } = await api(`/tasks/${taskId}`);
+    el.taskId.value = task.id;
+    el.taskTitle.value = task.title;
+    el.taskDescription.value = task.description || '';
+    el.taskPriority.value = task.priority;
+    el.taskStatus.value = task.status;
+    el.taskDueDate.value = task.dueDate || '';
+    el.taskParent.value = task.parentTaskId || '';
+    [...el.taskAssignees.options].forEach((option) => { option.selected = task.assignees.some((user) => user.id === option.value); });
+  } catch (error) {
+    showMessage(el.authError, error.message);
+  }
+}
+async function saveTask() {
+  if (!state.selectedProjectId) return;
+  const assigneeIds = [...el.taskAssignees.selectedOptions].map((option) => option.value);
+  const payload = {
+    title: el.taskTitle.value.trim(),
+    description: el.taskDescription.value.trim(),
+    priority: el.taskPriority.value,
+    status: el.taskStatus.value,
+    dueDate: el.taskDueDate.value || null,
+    parentTaskId: el.taskParent.value || null,
+    assigneeIds,
+  };
+  try {
+    if (el.taskId.value.trim()) {
+      await api(`/tasks/${el.taskId.value.trim()}`, { method: 'PUT', body: JSON.stringify(payload) });
+    } else {
+      await api(`/projects/${state.selectedProjectId}/tasks`, { method: 'POST', body: JSON.stringify(payload) });
+    }
+    resetTaskForm();
+    await loadProjectContext();
+  } catch (error) {
+    showMessage(el.authError, error.message);
+  }
+}
+async function deleteTask() {
+  const taskId = el.taskId.value.trim();
+  if (!taskId) return;
+  try {
+    await api(`/tasks/${taskId}`, { method: 'DELETE' });
+    resetTaskForm();
+    await loadProjectContext();
+  } catch (error) {
+    showMessage(el.authError, error.message);
+  }
+}
+
 el.registerBtn.onclick = register;
 el.loginBtn.onclick = login;
 el.logoutBtn.onclick = logout;
-el.createProjectBtn.onclick = createProject;
-el.createTaskBtn.onclick = createTask;
+el.createProjectBtn.onclick = saveProject;
+el.updateProjectBtn.onclick = saveProject;
+el.deleteProjectBtn.onclick = deleteProject;
+el.addMemberBtn.onclick = () => modifyMember('add');
+el.updateMemberBtn.onclick = () => modifyMember('update');
+el.removeMemberBtn.onclick = () => modifyMember('remove');
+el.createTaskBtn.onclick = saveTask;
+el.loadTaskBtn.onclick = () => loadTaskIntoForm();
+el.deleteTaskBtn.onclick = deleteTask;
+
 bootstrap();
