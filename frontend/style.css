@@ -3,7 +3,14 @@
   --panel: rgba(12, 23, 42, 0.92);
   --panel-soft: rgba(18, 31, 56, 0.88);
   --line: rgba(148, 163, 184, 0.18);
+  --bg: #07111f;
+  --panel: rgba(12, 23, 42, 0.92);
+  --panel-soft: rgba(18, 31, 56, 0.88);
+  --line: rgba(148, 163, 184, 0.18);
   --text: #e5eefc;
+  --muted: #93a4bf;
+  --primary: #60a5fa;
+  --primary-strong: #2563eb;
   --muted: #93a4bf;
   --primary: #60a5fa;
   --primary-strong: #2563eb;
@@ -15,6 +22,7 @@
 * { box-sizing: border-box; }
 body {
   margin: 0;
+  min-height: 100vh;
   min-height: 100vh;
   font-family: Inter, system-ui, sans-serif;
   color: var(--text);
