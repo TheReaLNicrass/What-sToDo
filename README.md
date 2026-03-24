@@ -16,6 +16,7 @@
 - [Tech-Stack](#-tech-stack)
 - [Projektstruktur](#-projektstruktur)
 - [Datenbankschema](#-datenbankschema)
+- [Kommunikationsfluss Microservices](#-kommunikation-der-microservices)
 - [API Endpunkte](#-api-endpunkte)
 - [Installation](#-installation)
 - [Umgebungsvariablen](#-umgebungsvariablen)
@@ -51,101 +52,81 @@
 | **Datenbank** | PostgreSQL |
 | **Authentifizierung** | bcrypt (Passwort-Hashing) |
 | **API-Testing** | Postman / Bruno |
+| **Testing** | Node.js Native Test Runner |
 
 ---
 
 ## 📂 Projektstruktur
 
 ```
-WhatsToDo/
-│
-├── 📄 server.js                  # Einstiegspunkt – startet den Server
-├── 📄 package.json               # Abhängigkeiten & npm-Skripte
-├── 📄 .env                       # Umgebungsvariablen (nicht in Git!)
-├── 📄 .gitignore
-│
-├── 📁 src/
-│   │
-│   ├── 📄 app.js                 # Express-App, Middleware, Routen
-│   |
-|   ├── 📁 assets/                # Diagramme
-|   |   ├── 📄 db_schema.puml
-│   │   └── 📄 Klassendiagramm.puml
-|   |   
-│   ├── 📁 routes/                # URL-Endpunkte
-│   │   ├── 📄 auth.routes.js
-│   │   ├── 📄 user.routes.js
-│   │   ├── 📄 project.routes.js
-│   │   ├── 📄 projectMember.routes.js
-│   │   ├── 📄 task.routes.js
-│   │   └── 📄 taskAssignee.routes.js
-│   │
-│   ├── 📁 controllers/           # Logik hinter den Endpunkten
-│   │   ├── 📄 auth.controller.js
-│   │   ├── 📄 user.controller.js
-│   │   ├── 📄 project.controller.js
-│   │   ├── 📄 projectMember.controller.js
-│   │   ├── 📄 task.controller.js
-│   │   └── 📄 taskAssignee.controller.js
-│   │
-│   ├── 📁 models/                # Datenbankzugriff
-│   │   ├── 📄 user.model.js
-│   │   ├── 📄 project.model.js
-│   │   ├── 📄 projectMember.model.js
-│   │   ├── 📄 task.model.js
-│   │   └── 📄 taskAssignee.model.js
-│   │
-│   ├── 📁 middleware/            # Authentifizierung & Berechtigungen
-│   │   ├── 📄 auth.middleware.js
-│   │   ├── 📄 permission.middleware.js
-│   │   └── 📄 error.middleware.js
-│   │
-│   └── 📁 db/
-│       └── 📄 index.js           # PostgreSQL Connection Pool
+What-sToDo/
+├── README.md
+├── frontend/
+│   ├── index.html
+│   ├── logic.js
+│   └── style.css
+└── backend/
+    ├── package.json
+    ├── server.js
+    ├── data/
+    │   └── store.json
+    └── src/
+        ├── app.js
+        ├── __tests__/
+        │   └── app.test.js
+        ├── assets/
+        │   ├── components.puml
+        │   └── db_schema.puml
+        ├── data/
+        │   └── store.js
+        ├── routes/
+        │   ├── auth.js
+        │   ├── projects.js
+        │   └── tasks.js
+        ├── services/
+        │   └── storeService.js
+        └── utils/
+            └── http.js
 ```
 
 ## 🌐 API Endpunkte
 
 ### Auth
-| Methode | Endpunkt | Beschreibung |
-|---|---|---|
-| `POST` | `/api/auth/register` | Neuen Nutzer registrieren |
-| `POST` | `/api/auth/login` | Einloggen |
-| `POST` | `/api/auth/logout` | Ausloggen |
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
 
-### Projekte
-| Methode | Endpunkt | Beschreibung |
-|---|---|---|
-| `GET` | `/api/projects` | Alle eigenen Projekte abrufen |
-| `GET` | `/api/projects/:id` | Einzelnes Projekt abrufen |
-| `POST` | `/api/projects` | Neues Projekt erstellen |
-| `PUT` | `/api/projects/:id` | Projekt bearbeiten |
-| `DELETE` | `/api/projects/:id` | Projekt löschen |
+### Users
+- `GET /api/users`
+- `POST /api/users`
 
-### Mitglieder
-| Methode | Endpunkt | Beschreibung |
-|---|---|---|
-| `GET` | `/api/projects/:id/members` | Alle Mitglieder eines Projekts |
-| `POST` | `/api/projects/:id/members` | Mitglied hinzufügen |
-| `PUT` | `/api/projects/:id/members/:userId` | Berechtigung ändern |
-| `DELETE` | `/api/projects/:id/members/:userId` | Mitglied entfernen |
+### Projects
+- `GET /api/projects`
+- `GET /api/projects/:projectId`
+- `POST /api/projects`
+- `PUT /api/projects/:projectId`
+- `DELETE /api/projects/:projectId`
+
+### Project Members
+- `GET /api/projects/:projectId/members`
+- `POST /api/projects/:projectId/members`
+- `PUT /api/projects/:projectId/members/:userId`
+- `DELETE /api/projects/:projectId/members/:userId`
 
 ### Tasks
-| Methode | Endpunkt | Beschreibung |
-|---|---|---|
-| `GET` | `/api/projects/:id/tasks` | Alle Top-Level Tasks eines Projekts |
-| `GET` | `/api/tasks/:id` | Einzelnen Task abrufen |
-| `GET` | `/api/tasks/:id/subtasks` | Unteraufgaben eines Tasks |
-| `POST` | `/api/projects/:id/tasks` | Neuen Task erstellen |
-| `PUT` | `/api/tasks/:id` | Task bearbeiten |
-| `DELETE` | `/api/tasks/:id` | Task löschen |
+- `GET /api/projects/:projectId/tasks`
+- `POST /api/projects/:projectId/tasks`
+- `GET /api/tasks/:taskId`
+- `PUT /api/tasks/:taskId`
+- `DELETE /api/tasks/:taskId`
+- `GET /api/tasks/:taskId/subtasks`
 
-### Task-Bearbeiter
-| Methode | Endpunkt | Beschreibung |
-|---|---|---|
-| `GET` | `/api/tasks/:id/assignees` | Alle Bearbeiter eines Tasks |
-| `POST` | `/api/tasks/:id/assignees` | Bearbeiter zuweisen |
-| `DELETE` | `/api/tasks/:id/assignees/:userId` | Bearbeiter entfernen |
+### Task Assignees
+- `GET /api/tasks/:taskId/assignees`
+- `POST /api/tasks/:taskId/assignees`
+- `PUT /api/tasks/:taskId/assignees`
+- `DELETE /api/tasks/:taskId/assignees/:userId`
 
 ---
 
@@ -153,6 +134,8 @@ WhatsToDo/
 
 <img width="982" height="468" alt="Datenbankschema" src="https://github.com/user-attachments/assets/15366515-719d-448a-ad40-9380747a2e3b" />
 
+## 📞 Kommunikation der Microservices
+<img width="723" height="858" alt="image" src="https://github.com/user-attachments/assets/e7fc882b-a07a-49d2-ab10-38aeba101458" />
 
 ## ⚙️ Installation
 

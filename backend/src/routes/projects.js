@@ -14,23 +14,41 @@ function buildProjectRouter(service) {
   }));
 
   router.get('/:projectId', asyncHandler(async (req, res) => {
-    const project = service.getProjectByIdForUser(req.params.projectId, req.user.id);
-    res.json({ project });
+    res.json({ project: service.getProjectByIdForUser(req.params.projectId, req.user.id) });
   }));
 
-  router.get('/:projectId/tasks', asyncHandler(async (req, res) => {
-    const tasks = service.listTasksForProject(req.user, req.params.projectId);
-    res.json({ tasks });
+  router.put('/:projectId', asyncHandler(async (req, res) => {
+    res.json({ project: service.updateProject(req.user, req.params.projectId, req.body || {}) });
   }));
 
-  router.post('/:projectId/tasks', asyncHandler(async (req, res) => {
-    const task = service.createTask(req.user, req.params.projectId, req.body || {});
-    res.status(201).json({ task });
+  router.delete('/:projectId', asyncHandler(async (req, res) => {
+    service.deleteProject(req.user, req.params.projectId);
+    res.status(204).end();
+  }));
+
+  router.get('/:projectId/members', asyncHandler(async (req, res) => {
+    res.json({ members: service.listProjectMembers(req.user, req.params.projectId) });
   }));
 
   router.post('/:projectId/members', asyncHandler(async (req, res) => {
-    const project = service.addProjectMember(req.user, req.params.projectId, req.body || {});
-    res.status(201).json({ project });
+    res.status(201).json({ project: service.addProjectMember(req.user, req.params.projectId, req.body || {}) });
+  }));
+
+  router.put('/:projectId/members/:userId', asyncHandler(async (req, res) => {
+    res.json({ project: service.updateProjectMember(req.user, req.params.projectId, req.params.userId, req.body || {}) });
+  }));
+
+  router.delete('/:projectId/members/:userId', asyncHandler(async (req, res) => {
+    service.deleteProjectMember(req.user, req.params.projectId, req.params.userId);
+    res.status(204).end();
+  }));
+
+  router.get('/:projectId/tasks', asyncHandler(async (req, res) => {
+    res.json({ tasks: service.listTasksForProject(req.user, req.params.projectId) });
+  }));
+
+  router.post('/:projectId/tasks', asyncHandler(async (req, res) => {
+    res.status(201).json({ task: service.createTask(req.user, req.params.projectId, req.body || {}) });
   }));
 
   return router;
