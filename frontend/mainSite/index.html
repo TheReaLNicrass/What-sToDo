@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>What-sToDo · Dashboard</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="app"></div>
+    <script src="/common.js"></script>
+    <script>
+      (async () => {
+        const common = window.AppCommon;
+        document.getElementById('app').innerHTML = common.renderShell({ pageKey: 'dashboard' });
+        common.bindShell();
+
+        const user = await common.loadSessionUser();
+        if (!common.requireAuth(user)) return;
+
+        const flattenTasks = (tasks = []) => tasks.flatMap((t) => [t, ...flattenTasks(t.subtasks || [])]);
+
+        try {
+          const projectsRes = await common.api('/projects');
+          const projects = Array.isArray(projectsRes?.projects) ? projectsRes.projects : [];
+
+          const taskResults = await Promise.all(
+            projects.map(async (project) => {
+              const res = await common.api(`/projects/${project.id}/tasks`);
+              return { project, tasks: flattenTasks(Array.isArray(res?.tasks) ? res.tasks : []) };
+            }),
+          );
+
+          const allTasks = taskResults.flatMap(({ tasks }) => tasks);
+          const assignedTasks = taskResults.flatMap(({ project, tasks }) =>
+            tasks
+              .filter((t) => (t.assignees || []).some((a) => a.id === user.id))
+              .map((t) => ({ ...t, project })),
+          );
+          const doneTasks = allTasks.filter((t) => t.status === 'done').length;
+
+          const projectCards = projects.length
+            ? projects
+                .map(
+                  (p) => `
+              <a class="project-card" href="#" data-project-id="${p.id}">
+                <div class="project-card-top">
+                  <span class="badge neutral">${common.escapeHtml(p.role)}</span>
+                  <span class="task-count">${p.taskCount} Tasks</span>
+                </div>
+                <h4>${common.escapeHtml(p.name)}</h4>
+                <p class="muted">${common.escapeHtml(p.description || 'Keine Beschreibung')}</p>
+                <div class="project-card-footer">
+                  <span class="muted small">${p.deadline ? 'Deadline: ' + String(p.deadline).slice(0, 10) : 'Kein Deadline'}</span>
+                </div>
+              </a>`,
+                )
+                .join('')
+            : '<p class="muted">Noch keine Projekte vorhanden. <a href="/projects" style="color:var(--primary)">Jetzt anlegen →</a></p>';
+
+          const assignedItems = assignedTasks.length
+            ? assignedTasks
+                .map(
+                  (t) => `
+              <div class="task-list-item" data-priority="${common.escapeHtml(t.priority)}">
+                <div>
+                  <strong>${common.escapeHtml(t.title)}</strong>
+                  <p class="muted small" style="margin:2px 0 0">${common.escapeHtml(t.project.name)} · ${common.escapeHtml(t.description || 'Keine Beschreibung')}</p>
+                </div>
+                <div class="meta-column">
+                  <span class="badge neutral">${common.escapeHtml(t.status)}</span>
+                  <span class="muted small">${(t.dueDate || '').slice(0, 10) || 'Kein Deadline'}</span>
+                </div>
+              </div>`,
+                )
+                .join('')
+            : '<p class="muted">Dir sind aktuell keine Aufgaben zugewiesen.</p>';
+
+          document.getElementById('pageContent').innerHTML = `
+            <div class="dashboard-header">
+              <h2>Guten Tag, ${common.escapeHtml(user.name)} 👋</h2>
+              <p class="muted">Hier siehst du deine Projekte und Aufgaben auf einen Blick.</p>
+            </div>
+            <div class="stats-row">
+              <div class="stat-card"><span class="stat-value">${projects.length}</span><span class="stat-label">Projekte</span></div>
+              <div class="stat-card"><span class="stat-value">${allTasks.length}</span><span class="stat-label">Aufgaben</span></div>
+              <div class="stat-card"><span class="stat-value">${doneTasks}</span><span class="stat-label">Erledigt</span></div>
+              <div class="stat-card"><span class="stat-value">${assignedTasks.length}</span><span class="stat-label">Zugewiesen</span></div>
+            </div>
+            <div class="dashboard-section">
+              <div class="section-header">
+                <h3>Projekte</h3>
+                <a class="primary link-button small" href="/projects">+ Neues Projekt</a>
+              </div>
+              <div class="project-grid">${projectCards}</div>
+            </div>
+            <div class="dashboard-section">
+              <h3>Mir zugewiesene Aufgaben</h3>
+              <div class="task-list-simple">${assignedItems}</div>
+            </div>`;
+
+          document.querySelectorAll('[data-project-id]').forEach((card) => {
+            card.onclick = (e) => {
+              e.preventDefault();
+              common.setCurrentProjectId(card.dataset.projectId);
+              location.href = '/projects';
+            };
+          });
+        } catch (error) {
+          common.notify('error', error.message);
+        }
+      })();
+    </script>
+  </body>
+</html>

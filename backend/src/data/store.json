@@ -1,0 +1,81 @@
+{
+  "users": [
+    {
+      "id": "bc84c197-549d-4908-8e90-b0ab56355e4f",
+      "name": "Admin Demo",
+      "email": "admin@example.com",
+      "password": "",
+      "created_at": "2026-03-23T18:30:31.581Z"
+    },
+    {
+      "id": "401ae73e-f146-47cb-9a21-118e27fead1d",
+      "name": "Mitarbeiter Demo",
+      "email": "employee@example.com",
+      "password": "",
+      "created_at": "2026-03-23T18:30:31.581Z"
+    }
+  ],
+  "projects": [
+    {
+      "id": "bf23b25a-3a47-4bb8-9716-3aae5c864300",
+      "name": "Website Relaunch",
+      "description": "Migration von Frontend und Backend auf eine gemeinsame API.",
+      "owner_id": "bc84c197-549d-4908-8e90-b0ab56355e4f",
+      "created_at": "2026-03-23T18:30:31.581Z",
+      "deadline": "2026-04-06"
+    }
+  ],
+  "project_members": [
+    {
+      "project_id": "bf23b25a-3a47-4bb8-9716-3aae5c864300",
+      "user_id": "bc84c197-549d-4908-8e90-b0ab56355e4f",
+      "role": 2,
+      "joined_at": "2026-03-23T18:30:31.581Z"
+    },
+    {
+      "project_id": "bf23b25a-3a47-4bb8-9716-3aae5c864300",
+      "user_id": "401ae73e-f146-47cb-9a21-118e27fead1d",
+      "role": 1,
+      "joined_at": "2026-03-23T18:30:31.581Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "03598c8f-1ad0-4861-a747-be1167280c9a",
+      "project_id": "bf23b25a-3a47-4bb8-9716-3aae5c864300",
+      "parent_id": null,
+      "title": "API mit Frontend verbinden",
+      "description": "Daten aus dem Backend laden und Formular dynamisch befüllen.",
+      "priority": 2,
+      "status": "in_progress",
+      "creator_id": "bc84c197-549d-4908-8e90-b0ab56355e4f",
+      "deadline": "2026-03-30",
+      "created_at": "2026-03-23T18:30:31.581Z"
+    },
+    {
+      "id": "096365e2-36de-44d7-88a8-d4cce76f110a",
+      "project_id": "bf23b25a-3a47-4bb8-9716-3aae5c864300",
+      "parent_id": "03598c8f-1ad0-4861-a747-be1167280c9a",
+      "title": "Task-Maske testen",
+      "description": "Subtasks und Assignees im UI prüfen.",
+      "priority": 1,
+      "status": "todo",
+      "creator_id": "401ae73e-f146-47cb-9a21-118e27fead1d",
+      "deadline": null,
+      "created_at": "2026-03-23T18:30:31.581Z"
+    }
+  ],
+  "task_assignees": [
+    {
+      "task_id": "03598c8f-1ad0-4861-a747-be1167280c9a",
+      "user_id": "401ae73e-f146-47cb-9a21-118e27fead1d",
+      "assigned_at": "2026-03-23T18:30:31.581Z"
+    },
+    {
+      "task_id": "096365e2-36de-44d7-88a8-d4cce76f110a",
+      "user_id": "bc84c197-549d-4908-8e90-b0ab56355e4f",
+      "assigned_at": "2026-03-23T18:30:31.581Z"
+    }
+  ],
+  "sessions": []
+}
