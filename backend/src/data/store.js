@@ -8,9 +8,7 @@ const defaultState = {
   users: [],
   projects: [],
   project_members: [],
-  project_members: [],
   tasks: [],
-  task_assignees: [],
   task_assignees: [],
   sessions: [],
 };
@@ -23,7 +21,6 @@ class DataStore {
   constructor(filePath = DATA_FILE) {
     this.filePath = filePath;
     this.state = clone(defaultState);
-    this.state = clone(defaultState);
     this.ensureLoaded();
   }
 
@@ -33,7 +30,6 @@ class DataStore {
       return;
     }
 
-    fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
     fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
     if (!fs.existsSync(this.filePath)) {
       this.state = this.createSeedState();
@@ -52,14 +48,9 @@ class DataStore {
     const rootTaskId = crypto.randomUUID();
     const subTaskId = crypto.randomUUID();
     const now = new Date().toISOString();
-    const rootTaskId = crypto.randomUUID();
-    const subTaskId = crypto.randomUUID();
-    const now = new Date().toISOString();
 
     return {
       users: [
-        { id: adminId, name: 'Admin Demo', email: 'admin@example.com', password: '', created_at: now },
-        { id: employeeId, name: 'Mitarbeiter Demo', email: 'employee@example.com', password: '', created_at: now },
         { id: adminId, name: 'Admin Demo', email: 'admin@example.com', password: '', created_at: now },
         { id: employeeId, name: 'Mitarbeiter Demo', email: 'employee@example.com', password: '', created_at: now },
       ],
@@ -76,20 +67,9 @@ class DataStore {
       project_members: [
         { project_id: projectId, user_id: adminId, role: 2, joined_at: now },
         { project_id: projectId, user_id: employeeId, role: 1, joined_at: now },
-          owner_id: adminId,
-          created_at: now,
-          deadline: new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
-        },
-      ],
-      project_members: [
-        { project_id: projectId, user_id: adminId, role: 2, joined_at: now },
-        { project_id: projectId, user_id: employeeId, role: 1, joined_at: now },
       ],
       tasks: [
         {
-          id: rootTaskId,
-          project_id: projectId,
-          parent_id: null,
           id: rootTaskId,
           project_id: projectId,
           parent_id: null,
@@ -124,7 +104,6 @@ class DataStore {
 
   persist() {
     if (this.filePath === ':memory:') return;
-    if (this.filePath === ':memory:') return;
     fs.writeFileSync(this.filePath, JSON.stringify(this.state, null, 2));
   }
 
@@ -139,7 +118,6 @@ class DataStore {
 
   update(mutator) {
     const draft = clone(this.state);
-    this.state = mutator(draft) || draft;
     this.state = mutator(draft) || draft;
     this.persist();
     return this.getState();
