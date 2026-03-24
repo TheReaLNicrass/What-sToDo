@@ -16,6 +16,7 @@
 - [Tech-Stack](#-tech-stack)
 - [Projektstruktur](#-projektstruktur)
 - [Datenbankschema](#-datenbankschema)
+- [Kommunikationsfluss Microservices](#-kommunikation-der-microservices)
 - [API Endpunkte](#-api-endpunkte)
 - [Installation](#-installation)
 - [Umgebungsvariablen](#-umgebungsvariablen)
@@ -74,6 +75,7 @@ What-sToDo/
         ├── __tests__/
         │   └── app.test.js
         ├── assets/
+        │   ├── components.puml
         │   └── db_schema.puml
         ├── data/
         │   └── store.js
@@ -131,6 +133,8 @@ What-sToDo/
 
 <img width="982" height="468" alt="Datenbankschema" src="https://github.com/user-attachments/assets/15366515-719d-448a-ad40-9380747a2e3b" />
 
+## 📞 Kommunikation der Microservices
+<img width="723" height="858" alt="image" src="https://github.com/user-attachments/assets/e7fc882b-a07a-49d2-ab10-38aeba101458" />
 
 ## ⚙️ Installation
 
