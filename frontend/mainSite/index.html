@@ -4,73 +4,112 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>What-sToDo · Dashboard</title>
-    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <div class="app-shell" id="app"></div>
-    <script src="../common.js"></script>
+    <script src="/common.js"></script>
     <script>
       (async () => {
         const common = window.AppCommon;
-        document.getElementById('app').innerHTML = common.renderShell({
-          pageTitle: 'Dein Dashboard',
-          pageDescription: 'Hier siehst du die Projekte, bei denen du Owner oder Mitglied bist, sowie alle Aufgaben, die dir zugeordnet wurden.',
-          pageKey: 'dashboard',
-        });
+        document.getElementById('app').innerHTML = common.renderShell({ pageKey: 'dashboard' });
         common.bindShell();
+
         const user = await common.loadSessionUser();
         if (!common.requireAuth(user)) return;
 
-        const flattenTasks = (tasks = []) => tasks.flatMap((task) => [task, ...flattenTasks(task.subtasks || [])]);
-        const projectsRes = await common.api('/projects');
-        const projects = projectsRes.projects || [];
-        const taskResults = await Promise.all(projects.map(async (project) => {
-          const tasksRes = await common.api(`/projects/${project.id}/tasks`);
-          return { project, tasks: flattenTasks(tasksRes.tasks || []) };
-        }));
+        const flattenTasks = (tasks = []) => tasks.flatMap((t) => [t, ...flattenTasks(t.subtasks || [])]);
 
-        const ownedProjects = projects.filter((project) => project.owner?.id === user.id);
-        const memberProjects = projects.filter((project) => project.owner?.id !== user.id);
-        const assignedTasks = taskResults.flatMap(({ project, tasks }) =>
-          tasks.filter((task) => (task.assignees || []).some((assignee) => assignee.id === user.id)).map((task) => ({ ...task, project })),
-        );
+        try {
+          const projectsRes = await common.api('/projects');
+          const projects = Array.isArray(projectsRes?.projects) ? projectsRes.projects : [];
 
-        document.getElementById('pageContent').innerHTML = `
-          <section class="dashboard-actions card panel quick-actions">
-            <div>
-              <p class="eyebrow">Aktionen</p>
-              <h3>Direkt loslegen</h3>
-              <p class="muted">Wechsle in die jeweilige Erstellungsseite und komme nach dem Speichern wieder hierher zurück.</p>
+          const taskResults = await Promise.all(
+            projects.map(async (project) => {
+              const res = await common.api(`/projects/${project.id}/tasks`);
+              return { project, tasks: flattenTasks(Array.isArray(res?.tasks) ? res.tasks : []) };
+            }),
+          );
+
+          const allTasks = taskResults.flatMap(({ tasks }) => tasks);
+          const assignedTasks = taskResults.flatMap(({ project, tasks }) =>
+            tasks
+              .filter((t) => (t.assignees || []).some((a) => a.id === user.id))
+              .map((t) => ({ ...t, project })),
+          );
+          const doneTasks = allTasks.filter((t) => t.status === 'done').length;
+
+          const projectCards = projects.length
+            ? projects
+                .map(
+                  (p) => `
+              <a class="project-card" href="#" data-project-id="${p.id}">
+                <div class="project-card-top">
+                  <span class="badge neutral">${common.escapeHtml(p.role)}</span>
+                  <span class="task-count">${p.taskCount} Tasks</span>
+                </div>
+                <h4>${common.escapeHtml(p.name)}</h4>
+                <p class="muted">${common.escapeHtml(p.description || 'Keine Beschreibung')}</p>
+                <div class="project-card-footer">
+                  <span class="muted small">${p.deadline ? 'Deadline: ' + String(p.deadline).slice(0, 10) : 'Kein Deadline'}</span>
+                </div>
+              </a>`,
+                )
+                .join('')
+            : '<p class="muted">Noch keine Projekte vorhanden. <a href="/projects" style="color:var(--primary)">Jetzt anlegen →</a></p>';
+
+          const assignedItems = assignedTasks.length
+            ? assignedTasks
+                .map(
+                  (t) => `
+              <div class="task-list-item" data-priority="${common.escapeHtml(t.priority)}">
+                <div>
+                  <strong>${common.escapeHtml(t.title)}</strong>
+                  <p class="muted small" style="margin:2px 0 0">${common.escapeHtml(t.project.name)} · ${common.escapeHtml(t.description || 'Keine Beschreibung')}</p>
+                </div>
+                <div class="meta-column">
+                  <span class="badge neutral">${common.escapeHtml(t.status)}</span>
+                  <span class="muted small">${(t.dueDate || '').slice(0, 10) || 'Kein Deadline'}</span>
+                </div>
+              </div>`,
+                )
+                .join('')
+            : '<p class="muted">Dir sind aktuell keine Aufgaben zugewiesen.</p>';
+
+          document.getElementById('pageContent').innerHTML = `
+            <div class="dashboard-header">
+              <h2>Guten Tag, ${common.escapeHtml(user.name)} 👋</h2>
+              <p class="muted">Hier siehst du deine Projekte und Aufgaben auf einen Blick.</p>
             </div>
-            <div class="action-row">
-              <a class="primary link-button" href="/projects">Projekt anlegen</a>
-              <a class="secondary link-button" href="/tasks">Aufgabe anlegen</a>
+            <div class="stats-row">
+              <div class="stat-card"><span class="stat-value">${projects.length}</span><span class="stat-label">Projekte</span></div>
+              <div class="stat-card"><span class="stat-value">${allTasks.length}</span><span class="stat-label">Aufgaben</span></div>
+              <div class="stat-card"><span class="stat-value">${doneTasks}</span><span class="stat-label">Erledigt</span></div>
+              <div class="stat-card"><span class="stat-value">${assignedTasks.length}</span><span class="stat-label">Zugewiesen</span></div>
             </div>
-          </section>
-          <section class="content-grid dashboard-grid">
-            <article class="panel card section-stack">
-              <p class="eyebrow">Owner</p>
-              <h3>Deine Projekte</h3>
-              <div class="stack-list">${ownedProjects.length ? ownedProjects.map((project) => `<div class="list-item static"><div><strong>${common.escapeHtml(project.name)}</strong><p class="muted">${common.escapeHtml(project.description || 'Keine Beschreibung')}</p></div><div class="meta-column"><span class="badge neutral">Owner</span><span class="muted">${project.taskCount} Tasks</span></div></div>`).join('') : '<p class="muted">Du besitzt aktuell keine Projekte.</p>'}</div>
-            </article>
-            <article class="panel card section-stack">
-              <p class="eyebrow">Mitgliedschaften</p>
-              <h3>Projekte mit deiner Zuordnung</h3>
-              <div class="stack-list">${memberProjects.length ? memberProjects.map((project) => `<div class="list-item static"><div><strong>${common.escapeHtml(project.name)}</strong><p class="muted">${common.escapeHtml(project.description || 'Keine Beschreibung')}</p></div><div class="meta-column"><span class="badge neutral">${common.escapeHtml(project.role)}</span><span class="muted">Owner: ${common.escapeHtml(project.owner?.name || '—')}</span></div></div>`).join('') : '<p class="muted">Keine weiteren Projektzuordnungen vorhanden.</p>'}</div>
-            </article>
-          </section>
-          <section class="panel card section-stack">
-            <p class="eyebrow">Aufgaben</p>
-            <h3>Dir zugewiesene Aufgaben</h3>
-            <div class="stack-list">${assignedTasks.length ? assignedTasks.map((task) => `<div class="list-item static"><div><strong>${common.escapeHtml(task.title)}</strong><p class="muted">${common.escapeHtml(task.project.name)} · ${common.escapeHtml(task.description || 'Keine Beschreibung')}</p></div><div class="meta-column"><span class="badge neutral">${common.escapeHtml(task.status)}</span><span class="muted">Deadline: ${common.escapeHtml((task.dueDate || '').slice(0, 10) || 'offen')}</span></div></div>`).join('') : '<p class="muted">Dir sind aktuell keine Aufgaben zugewiesen.</p>'}</div>
-          </section>`;
-      })().catch((error) => {
-        const notice = document.getElementById('pageNotice');
-        if (notice) {
-          notice.style.display = 'block';
-          notice.textContent = error.message || 'Dashboard konnte nicht geladen werden.';
+            <div class="dashboard-section">
+              <div class="section-header">
+                <h3>Projekte</h3>
+                <a class="primary link-button small" href="/projects">+ Neues Projekt</a>
+              </div>
+              <div class="project-grid">${projectCards}</div>
+            </div>
+            <div class="dashboard-section">
+              <h3>Mir zugewiesene Aufgaben</h3>
+              <div class="task-list-simple">${assignedItems}</div>
+            </div>`;
+
+          document.querySelectorAll('[data-project-id]').forEach((card) => {
+            card.onclick = (e) => {
+              e.preventDefault();
+              common.setCurrentProjectId(card.dataset.projectId);
+              location.href = '/projects';
+            };
+          });
+        } catch (error) {
+          common.notify('error', error.message);
         }
-      });
+      })();
     </script>
   </body>
 </html>

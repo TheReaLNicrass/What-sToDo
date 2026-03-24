@@ -289,7 +289,7 @@ class StoreService {
       title: payload.title,
       description: payload.description || '',
       priority: Number.isFinite(payload.priority) ? payload.priority : this.priorityToLevel(payload.priority || 'medium'),
-      status: payload.status || 'todo',
+      status: payload.status || 'open',
       creator_id: currentUser.id,
       deadline: payload.dueDate || null,
       created_at: new Date().toISOString(),

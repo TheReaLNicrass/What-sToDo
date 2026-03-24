@@ -1,16 +1,11 @@
 window.AppCommon = (() => {
   const storageKeys = {
-    apiUrl: 'apiUrl',
     currentUser: 'currentUser',
     currentProjectId: 'currentProjectId',
   };
 
   function getApiUrl() {
-    return localStorage.getItem(storageKeys.apiUrl) || `${location.origin}/api`;
-  }
-
-  function setApiUrl(value) {
-    localStorage.setItem(storageKeys.apiUrl, value.replace(/\/$/, ''));
+    return `${location.origin}/api`;
   }
 
   function getCurrentUser() {
@@ -36,8 +31,7 @@ window.AppCommon = (() => {
   }
 
   async function api(path, options = {}) {
-    const apiUrl = getApiUrl();
-    const response = await fetch(`${apiUrl}${path}`, {
+    const response = await fetch(`${getApiUrl()}${path}`, {
       credentials: 'include',
       ...options,
       headers: {
@@ -56,7 +50,7 @@ window.AppCommon = (() => {
       const data = await api('/auth/me');
       setCurrentUser(data.user);
       return data.user;
-    } catch (error) {
+    } catch {
       setCurrentUser(null);
       return null;
     }
@@ -71,42 +65,43 @@ window.AppCommon = (() => {
     }
   }
 
-  function renderShell({ pageTitle, pageDescription, pageKey }) {
+  function renderShell({ pageKey }) {
     const user = getCurrentUser();
-    const links = [
-      ['/dashboard', 'Start', 'dashboard'],
-      ['/auth', 'Auth', 'auth'],
-      ['/projects', 'Projekte', 'projects'],
-      ['/tasks', 'Aufgaben', 'tasks'],
-    ].map(([href, label, key]) => `<a class="nav-link ${key === pageKey ? 'active' : ''}" href="${href}">${label}</a>`).join('');
+    const navItems = [
+      { href: '/dashboard', label: 'Dashboard', key: 'dashboard' },
+      { href: '/projects', label: 'Projekte', key: 'projects' },
+      { href: '/tasks', label: 'Aufgaben', key: 'tasks' },
+    ];
+    const navLinks = navItems
+      .map(({ href, label, key }) => `<a class="nav-link ${key === pageKey ? 'active' : ''}" href="${href}">${escapeHtml(label)}</a>`)
+      .join('');
+    const avatarLetter = escapeHtml((user?.name || '?').trim().charAt(0).toUpperCase());
 
     return `
       <aside class="sidebar">
-        <div class="brand card">
-          <p class="eyebrow">Workspace</p>
-          <h1>What-sToDo</h1>
-          <p class="muted">Klare Bereiche für Authentifizierung, Projekte und Aufgaben – passend zum relationalen Schema.</p>
-          <label class="field compact">
-            <span>API URL</span>
-            <input id="apiUrl" value="${escapeHtml(getApiUrl())}" />
-          </label>
+        <div class="sidebar-brand">
+          <div class="brand-logo">W</div>
+          <span class="brand-name">What's<strong>ToDo</strong></span>
         </div>
-        <nav class="card nav-card">${links}</nav>
-        <div class="card profile-card">
-          <p class="eyebrow">Session</p>
-          <h3>${user ? escapeHtml(user.name) : 'Nicht eingeloggt'}</h3>
-          <p class="muted">${user ? escapeHtml(user.email) : 'Bitte zuerst über die Auth-Seite anmelden.'}</p>
-          <button id="globalLogoutBtn" class="ghost ${user ? '' : 'is-hidden'}">Logout</button>
+        <nav class="sidebar-nav">${navLinks}</nav>
+        <div class="sidebar-footer">
+          <div class="sidebar-user-info">
+            <div class="user-avatar">${avatarLetter}</div>
+            <div class="user-text">
+              <strong class="user-name">${user ? escapeHtml(user.name) : '—'}</strong>
+              <p class="user-email">${user ? escapeHtml(user.email) : ''}</p>
+            </div>
+          </div>
+          <button id="globalLogoutBtn" class="logout-btn ${user ? '' : 'is-hidden'}" title="Abmelden">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
         </div>
       </aside>
       <main class="main-content">
-        <header class="hero card page-hero">
-          <div>
-            <p class="eyebrow">${pageKey}</p>
-            <h2>${pageTitle}</h2>
-            <p class="muted">${pageDescription}</p>
-          </div>
-        </header>
         <div id="pageNotice" class="notice error"></div>
         <div id="pageSuccess" class="notice success"></div>
         <section id="pageContent"></section>
@@ -114,14 +109,9 @@ window.AppCommon = (() => {
   }
 
   function bindShell() {
-    const apiInput = document.getElementById('apiUrl');
-    if (apiInput) {
-      apiInput.onchange = () => setApiUrl(apiInput.value.trim() || `${location.origin}/api`);
-      apiInput.onblur = apiInput.onchange;
-    }
-    const logoutButton = document.getElementById('globalLogoutBtn');
-    if (logoutButton && !logoutButton.classList.contains('is-hidden')) {
-      logoutButton.onclick = async () => {
+    const logoutBtn = document.getElementById('globalLogoutBtn');
+    if (logoutBtn && !logoutBtn.classList.contains('is-hidden')) {
+      logoutBtn.onclick = async () => {
         await logout();
         location.href = '/auth';
       };
@@ -150,7 +140,6 @@ window.AppCommon = (() => {
     api,
     bindShell,
     escapeHtml,
-    getApiUrl,
     getCurrentProjectId,
     getCurrentUser,
     loadSessionUser,
@@ -158,7 +147,6 @@ window.AppCommon = (() => {
     notify,
     renderShell,
     requireAuth,
-    setApiUrl,
     setCurrentProjectId,
     setCurrentUser,
   };

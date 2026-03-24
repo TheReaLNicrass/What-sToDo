@@ -3,12 +3,55 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WhatsToDo · Auth</title>
-    <link rel="stylesheet" href="../style.css" />
+    <title>What-sToDo · Anmelden</title>
+    <link rel="stylesheet" href="/style.css" />
   </head>
-  <body>
-    <div class="app-shell" id="app"><main class="main-content"><section class="panel card section-stack"><p class="eyebrow">Authentifizierung</p><h2>What-sToDo lädt…</h2><p class="muted">Falls diese Ansicht bestehen bleibt, prüfe bitte den Browser-Cache.</p></section></main></div>
-    <script src="../common.js"></script>
-    <script src="auth.js"></script>
+  <body class="auth-body">
+    <div class="auth-container">
+      <div class="auth-card">
+        <div class="auth-brand">
+          <div class="brand-logo">W</div>
+          <span class="brand-name">What's<strong>ToDo</strong></span>
+        </div>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Anmelden</button>
+          <button class="auth-tab" data-tab="register">Registrieren</button>
+        </div>
+
+        <div id="authNotice" class="notice error"></div>
+        <div id="authSuccess" class="notice success"></div>
+
+        <div id="loginForm" class="auth-form">
+          <label class="field">
+            <span>E-Mail</span>
+            <input id="loginEmail" type="email" placeholder="name@firma.de" autocomplete="email" />
+          </label>
+          <label class="field">
+            <span>Passwort</span>
+            <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password" />
+          </label>
+          <button id="loginBtn" class="primary full-width">Anmelden</button>
+        </div>
+
+        <div id="registerForm" class="auth-form" style="display:none;">
+          <label class="field">
+            <span>Name</span>
+            <input id="registerName" placeholder="Max Mustermann" autocomplete="name" />
+          </label>
+          <label class="field">
+            <span>E-Mail</span>
+            <input id="registerEmail" type="email" placeholder="name@firma.de" autocomplete="email" />
+          </label>
+          <label class="field">
+            <span>Passwort</span>
+            <input id="registerPassword" type="password" placeholder="••••••••" autocomplete="new-password" />
+          </label>
+          <button id="registerBtn" class="primary full-width">Konto erstellen</button>
+        </div>
+      </div>
+    </div>
+    <script src="/common.js"></script>
+    <script src="/authSite/auth.js"></script>
   </body>
 </html>
