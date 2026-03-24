@@ -35,8 +35,8 @@ class DatabaseService {
 
     const hash = await bcrypt.hash(password, 10);
     const result = await this.query(
-      'INSERT INTO users (id, name, email, password, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id, name, email, created_at',
-      [crypto.randomUUID(), name, email.toLowerCase(), hash],
+      'INSERT INTO users (name, email, password, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, name, email, created_at',
+      [name, email.toLowerCase(), hash],
     );
     return publicUser(result.rows[0]);
   }

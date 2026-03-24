@@ -82,9 +82,11 @@ class StoreService {
     return { token, user: publicUser(user) };
   }
 
-  logout(token) {
+  logout(sessionIdentifier) {
     this.store.update((draft) => {
-      draft.sessions = draft.sessions.filter((entry) => entry.token !== token);
+      draft.sessions = draft.sessions.filter((entry) => (
+        entry.token !== sessionIdentifier && entry.user_id !== sessionIdentifier
+      ));
       return draft;
     });
   }

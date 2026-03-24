@@ -1,0 +1,86 @@
+@startuml
+title What-sToDo – Kommunikationsfluss
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam linetype ortho
+skinparam defaultFontName Arial
+skinparam ranksep 100
+skinparam nodesep 60
+
+skinparam component {
+  BackgroundColor<<frontend>> #1D9E75
+  BorderColor<<frontend>> #0F6E56
+  FontColor<<frontend>> #White
+  BackgroundColor<<backend>> #534AB7
+  BorderColor<<backend>> #3C3489
+  FontColor<<backend>> #White
+  BackgroundColor<<db>> #BA7517
+  BorderColor<<db>> #854F0B
+  FontColor<<db>> #White
+}
+skinparam package {
+  BackgroundColor<<frontend>> #0F6E5622
+  BorderColor<<frontend>> #1D9E75
+  BackgroundColor<<backend>> #3C348922
+  BorderColor<<backend>> #534AB7
+}
+
+actor "Browser (User)" as User
+
+package "Frontend" <<frontend>> {
+  component "Auth UI" <<frontend>> as AuthUI
+  component "Dashboard UI" <<frontend>> as DashboardUI
+  component "Projects UI" <<frontend>> as ProjectsUI
+  component "Tasks UI" <<frontend>> as TasksUI
+}
+
+' Unsichtbarer Spacer zwischen Frontend und Backend
+component " " as Spacer1 #Transparent;line:Transparent
+component " " as Spacer2 #Transparent;line:Transparent
+
+package "Backend API (Express)" <<backend>> {
+  component "Auth service\n/api/auth/*" <<backend>> as AuthService
+  component "User service\n/api/users/*" <<backend>> as UserService
+  component "Project service\n/api/projects/*" <<backend>> as ProjectService
+  component "Task service\n/api/tasks/*" <<backend>> as TaskService
+}
+
+component "Data store\nPostgreSQL" <<db>> as DataStore
+
+' Spacer erzwingen Abstand
+AuthUI --> Spacer1 #Transparent;line:Transparent
+Spacer1 --> AuthService #Transparent;line:Transparent
+TasksUI --> Spacer2 #Transparent;line:Transparent
+Spacer2 --> TaskService #Transparent;line:Transparent
+
+' ── User → Frontend ──
+User -[#CCCCCC]-> AuthUI
+User -[#CCCCCC]-> DashboardUI
+User -[#CCCCCC]-> ProjectsUI
+User -[#CCCCCC]-> TasksUI
+
+' ── Frontend → Backend HTTP/REST (grün) ──
+AuthUI      -d[#22c55e]-> AuthService    : <color:#22c55e>Register / Login /</color>\n<color:#22c55e>Logout</color>
+ProjectsUI  -d[#22c55e]-> ProjectService : <color:#22c55e>  CRUD +\n <color:#22c55e> Members</color>
+TasksUI     -d[#22c55e]-> TaskService    : <color:#22c55e>CRUD + Subtasks</color>
+
+' ── Dashboard → Backend optional (gelb gestrichelt) ──
+DashboardUI -[#f59e0b,dashed]-> AuthService    : <color:#f59e0b>/auth/me</color>
+DashboardUI -[#f59e0b,dashed]-> ProjectService : <color:#f59e0b>Projekte laden</color>
+DashboardUI -[#f59e0b,dashed]-> TaskService    : <color:#f59e0b>Tasks laden</color>
+
+' ── Services → Datenbank (orange) ──
+AuthService    -[#BA7517]-> DataStore
+UserService    -[#BA7517]-> DataStore
+ProjectService -[#BA7517]-> DataStore
+TaskService    -[#BA7517]-> DataStore
+
+legend right
+  |= Linie                         |= Bedeutung        |
+  | <color:#22c55e>──────></color>  | HTTP / REST       |
+  | <color:#f59e0b>- - - -></color> | HTTP (optional)   |
+  | <color:#BA7517>──────></color>  | Datenbank-Zugriff |
+  | <color:#CCCCCC>──────></color>  | User-Interaktion  |
+endlegend
+
+@enduml

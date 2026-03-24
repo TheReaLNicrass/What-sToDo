@@ -93,6 +93,7 @@ What-sToDo/
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
+- `GET /api/auth/me`
 
 ### Users
 - `GET /api/users`
@@ -131,6 +132,8 @@ What-sToDo/
 
 <img width="982" height="468" alt="Datenbankschema" src="https://github.com/user-attachments/assets/15366515-719d-448a-ad40-9380747a2e3b" />
 
+## 📞 Kommunikation der Microservices
+![Kommunikationsfluss](image-1.png)
 
 ## ⚙️ Installation
 

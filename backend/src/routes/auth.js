@@ -11,7 +11,13 @@ function buildAuthRouter(service) {
   }));
 
   router.post('/login', asyncHandler(async (req, res) => {
-    const user = await service.login(req.body || {});
+    const loginResult = await service.login(req.body || {});
+    const user = loginResult?.user || loginResult;
+    if (!user?.id) {
+      const error = new Error('Login-Antwort ist ungültig.');
+      error.status = 500;
+      throw error;
+    }
     res.setHeader('Set-Cookie', createSessionCookie(user.id));
     res.json({ user });
   }));
