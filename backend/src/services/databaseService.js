@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const db = require('../db');
 const { ROLE_LEVELS } = require('./storeService');
 
+// Entfernt das Passwort-Hash aus dem User-Objekt, bevor es an den Client geschickt wird.
 function publicUser(user) {
   return {
     id: user.id,
@@ -87,6 +88,9 @@ class DatabaseService {
     const members = Array.isArray(payload.members) ? payload.members : [];
     await this.validateMembers(members);
 
+    // Transaktion: Projekt + Mitglieder werden atomar angelegt.
+    // Bei Fehler wird alles zurückgerollt, damit kein halbfertiges Projekt entsteht.
+    // Doku: https://node-postgres.com/features/transactions
     const client = await db.connect();
     try {
       await client.query('BEGIN');
@@ -256,6 +260,10 @@ class DatabaseService {
   async deleteTask(currentUser, taskId) {
     const task = await this.getTaskById(currentUser.id, taskId);
     this.assertProjectRole(task.project, currentUser.id, 'employee');
+    // Rekursives CTE: sammelt erst alle Nachfahren des Tasks und löscht sie dann auf einmal.
+    // Das ist nötig, weil ON DELETE CASCADE nur eine Ebene tief greift, wenn der FK
+    // auf denselben Task-Table zeigt. Mit dem CTE werden alle Ebenen erfasst.
+    // Doku zu WITH RECURSIVE: https://www.postgresql.org/docs/current/queries-with.html
     await this.query(
       `WITH RECURSIVE descendants AS (
          SELECT id FROM tasks WHERE id = $1
@@ -340,6 +348,8 @@ class DatabaseService {
     return result.rows.map((row) => ({ role: this.levelToRole(row.role), joinedAt: row.joined_at, user: publicUser(row) }));
   }
 
+  // Reichert einen raw Task-Row aus der DB mit Subtasks, Assignees und Projektkontext an.
+  // Die vier Queries laufen parallel (Promise.all), danach werden Subtasks rekursiv angereichert.
   async enrichTask(task, userId) {
     const [project, subtasksResult, assigneesResult, creatorResult] = await Promise.all([
       this.getProjectByIdForUser(task.project_id, userId),
@@ -393,6 +403,8 @@ class DatabaseService {
     if (!project.members.some((member) => member.user.id === userId)) throw this.badRequest('Zugeordnete Person ist kein Projektmitglied.');
   }
 
+  // Prüft, ob der Nutzer mindestens die geforderte Rolle im Projekt hat.
+  // Rollen sind nach Befugnissen geordnet: guest (0) < employee (1) < admin (2).
   assertProjectRole(project, userId, requiredRole) {
     const member = project.members.find((entry) => entry.user.id === userId);
     const role = member?.role || 'guest';

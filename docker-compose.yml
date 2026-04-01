@@ -8,6 +8,9 @@ services:
       POSTGRES_PASSWORD: devpassword
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Schema wird beim allerersten Start (leeres Volume) automatisch eingespielt.
+      # Doku: https://hub.docker.com/_/postgres (Abschnitt "Initialization scripts")
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dev -d whatstodo"]
       interval: 5s
@@ -20,12 +23,15 @@ services:
     ports:
       - "3000:3000"
     environment:
+      PORT: 3000
+      # SESSION_SECRET sollte in Produktion über eine .env-Datei oder Secrets gesetzt werden.
+      # Doku: https://docs.docker.com/compose/how-tos/environment-variables/
+      SESSION_SECRET: ${SESSION_SECRET:-whatstodo-dev-secret}
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: whatstodo
       DB_USER: dev
       DB_PASSWORD: devpassword
-      PORT: 3000
     depends_on:
       db:
         condition: service_healthy
