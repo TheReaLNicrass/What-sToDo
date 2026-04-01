@@ -37,9 +37,12 @@ function createApp({ storeService = null } = {}) {
   // Doku zum Cookie-Format: src/utils/session.js
   app.use('/api', async (req, res, next) => {
     try {
-      const userId = readSessionUserId(req.headers.cookie || '');
-      if (!userId) return res.status(401).json({ error: 'Authentifizierung erforderlich.' });
-      const user = await service.getUserById(userId);
+      const sessionValue = readSessionUserId(req.headers.cookie || '');
+      if (!sessionValue) return res.status(401).json({ error: 'Authentifizierung erforderlich.' });
+      const user = service.getUserByToken
+        ? await Promise.resolve(service.getUserByToken(sessionValue))
+        : await service.getUserById(sessionValue);
+      if (!user) return res.status(401).json({ error: 'Authentifizierung erforderlich.' });
       req.user = user;
       return next();
     } catch (error) {

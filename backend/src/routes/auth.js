@@ -18,7 +18,7 @@ function buildAuthRouter(service) {
       error.status = 500;
       throw error;
     }
-    res.setHeader('Set-Cookie', createSessionCookie(user.id));
+    res.setHeader('Set-Cookie', createSessionCookie(loginResult.token || user.id));
     res.json({ user });
   }));
 

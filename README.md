@@ -2,7 +2,7 @@
 
 Eine webbasierte Aufgabenverwaltung für Teams, entwickelt im Rahmen des DevOps-Moduls an der DHGE.
 
-Nutzer können Projekte anlegen, Teammitglieder mit verschiedenen Rollen einladen und gemeinsam Tasks verwalten. Tasks lassen sich beliebig tief verschachteln, sodass große Aufgaben in übersichtliche Unteraufgaben aufgeteilt werden können.
+Nutzer können Projekte anlegen, Teammitglieder mit verschiedenen Rollen einladen und gemeinsam Tasks verwalten. Tasks lassen sich beliebig tief verschachteln, sodass größere Aufgaben in kleinere Unteraufgaben aufgeteilt werden können.
 
 ---
 
@@ -17,6 +17,7 @@ Nutzer können Projekte anlegen, Teammitglieder mit verschiedenen Rollen einlade
 - [Installation](#installation)
 - [Docker](#docker)
 - [CI/CD](#cicd)
+- [Umgebungsvariablen](#umgebungsvariablen)
 - [Team](#team)
 
 ---
@@ -24,6 +25,7 @@ Nutzer können Projekte anlegen, Teammitglieder mit verschiedenen Rollen einlade
 ## Features
 
 - Registrierung und Login mit bcrypt-Passwort-Hashing
+- Session-basierte Authentifizierung über signierte Cookies (HMAC-SHA256)
 - Projekte anlegen, bearbeiten und löschen
 - Teammitglieder mit Rollen einladen (Guest, Mitarbeiter, Admin)
 - Tasks mit Priorität, Status, Deadline und zugewiesenen Bearbeitern
@@ -54,27 +56,47 @@ Nutzer können Projekte anlegen, Teammitglieder mit verschiedenen Rollen einlade
 WhatsToDo/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml          # GitHub Actions Pipeline
+│       └── ci.yml              # GitHub Actions Pipeline
 ├── backend/
-│   ├── server.js           # Einstiegspunkt
-│   ├── .env.example        # Vorlage für Umgebungsvariablen
+│   ├── server.js               # Einstiegspunkt
+│   ├── package.json
+│   ├── .env.example            # Vorlage für Umgebungsvariablen
 │   └── src/
-│       ├── app.js          # Express-App-Factory
-│       ├── db/             # PostgreSQL-Connection-Pool
-│       ├── routes/         # Auth, Projekte, Tasks
-│       ├── services/       # DatabaseService (Postgres) / StoreService (Fallback)
-│       ├── utils/          # Session, HTTP-Hilfsfunktionen
+│       ├── app.js              # Express-App-Factory (Dependency Injection)
+│       ├── data/
+│       │   └── store.js        # In-memory DataStore für Tests
+│       ├── db/
+│       │   └── index.js        # PostgreSQL-Connection-Pool
+│       ├── routes/
+│       │   ├── auth.js         # Login, Logout, Register, Me
+│       │   ├── projects.js     # Projekt- und Mitgliederverwaltung
+│       │   ├── tasks.js        # Task- und Assignee-Verwaltung
+│       │   └── users.js        # Nutzerliste
+│       ├── services/
+│       │   ├── databaseService.js  # Implementierung mit PostgreSQL
+│       │   └── storeService.js     # In-memory Fallback (kein DB nötig)
+│       ├── utils/
+│       │   ├── http.js         # asyncHandler-Wrapper
+│       │   └── session.js      # Cookie-Erstellung, -Validierung, HMAC
 │       └── __tests__/
-│           └── app.test.js # Integrationstests
+│           └── app.test.js     # Integrationstests (laufen ohne DB)
 ├── db/
-│   └── schema.sql          # Datenbankschema (wird beim Docker-Start eingespielt)
+│   └── schema.sql              # Datenbankschema (wird beim Docker-Start eingespielt)
 ├── frontend/
-│   ├── common.js           # Geteilte Logik (API, Shell, Theme)
-│   ├── style.css           # Globales Stylesheet (Dark/Light Mode)
-│   ├── authSite/           # Login- und Registrierungsseite
-│   ├── mainSite/           # Dashboard
-│   ├── projectSite/        # Projektverwaltung
-│   └── taskSite/           # Aufgabenverwaltung
+│   ├── common.js               # Geteilte Logik (API-Aufrufe, Theme)
+│   ├── style.css               # Globales Stylesheet (Dark/Light Mode)
+│   ├── authSite/               # Login- und Registrierungsseite
+│   │   ├── auth.html
+│   │   └── auth.js
+│   ├── mainSite/               # Dashboard
+│   │   ├── index.html
+│   │   └── logic.js
+│   ├── projectSite/            # Projektverwaltung
+│   │   ├── projects.html
+│   │   └── projects.js
+│   └── taskSite/               # Aufgabenverwaltung
+│       ├── tasks.html
+│       └── tasks.js
 ├── Dockerfile
 └── docker-compose.yml
 ```
@@ -89,53 +111,61 @@ WhatsToDo/
 
 ## API-Endpunkte
 
+Alle Endpunkte unterhalb von `/api/auth` erfordern eine aktive Session (Cookie).
+
 ### Auth
+
 | Methode | Pfad | Beschreibung |
 |---|---|---|
 | POST | `/api/auth/register` | Neuen Nutzer registrieren |
 | POST | `/api/auth/login` | Einloggen, setzt Session-Cookie |
-| POST | `/api/auth/logout` | Ausloggen, löscht Session |
-| GET | `/api/auth/me` | Aktuellen Nutzer abfragen |
+| POST | `/api/auth/logout` | Ausloggen, invalidiert die Session |
+| GET | `/api/auth/me` | Aktuell eingeloggten Nutzer abfragen |
 
 ### Nutzer
+
 | Methode | Pfad | Beschreibung |
 |---|---|---|
 | GET | `/api/users` | Alle Nutzer auflisten |
 | GET | `/api/users/:userId` | Einzelnen Nutzer abrufen |
 
 ### Projekte
+
 | Methode | Pfad | Beschreibung |
 |---|---|---|
 | GET | `/api/projects` | Eigene Projekte auflisten |
 | POST | `/api/projects` | Neues Projekt anlegen |
-| GET | `/api/projects/:projectId` | Projekt abrufen |
+| GET | `/api/projects/:projectId` | Einzelnes Projekt abrufen |
 | PUT | `/api/projects/:projectId` | Projekt bearbeiten |
 | DELETE | `/api/projects/:projectId` | Projekt löschen |
 
 ### Projektmitglieder
+
 | Methode | Pfad | Beschreibung |
 |---|---|---|
 | GET | `/api/projects/:projectId/members` | Mitglieder auflisten |
 | POST | `/api/projects/:projectId/members` | Mitglied hinzufügen |
-| PUT | `/api/projects/:projectId/members/:userId` | Rolle ändern |
+| PUT | `/api/projects/:projectId/members/:userId` | Rolle eines Mitglieds ändern |
 | DELETE | `/api/projects/:projectId/members/:userId` | Mitglied entfernen |
 
 ### Tasks
+
 | Methode | Pfad | Beschreibung |
 |---|---|---|
 | GET | `/api/projects/:projectId/tasks` | Tasks eines Projekts auflisten |
 | POST | `/api/projects/:projectId/tasks` | Neuen Task anlegen |
 | GET | `/api/tasks/:taskId` | Task abrufen |
 | PUT | `/api/tasks/:taskId` | Task bearbeiten |
-| DELETE | `/api/tasks/:taskId` | Task löschen (inkl. Subtasks) |
+| DELETE | `/api/tasks/:taskId` | Task löschen (inkl. aller Subtasks) |
 | GET | `/api/tasks/:taskId/subtasks` | Unteraufgaben auflisten |
 
 ### Task-Assignees
+
 | Methode | Pfad | Beschreibung |
 |---|---|---|
 | GET | `/api/tasks/:taskId/assignees` | Bearbeiter auflisten |
 | POST | `/api/tasks/:taskId/assignees` | Bearbeiter hinzufügen |
-| PUT | `/api/tasks/:taskId/assignees` | Bearbeiter komplett ersetzen |
+| PUT | `/api/tasks/:taskId/assignees` | Bearbeiterliste komplett ersetzen |
 | DELETE | `/api/tasks/:taskId/assignees/:userId` | Bearbeiter entfernen |
 
 ---
@@ -150,7 +180,7 @@ Berechtigungen gelten pro Projekt – ein Nutzer kann in verschiedenen Projekten
 | Mitarbeiter | 1 | Tasks anlegen, bearbeiten und abschließen |
 | Admin | 2 | Alles, inkl. Mitglieder verwalten und Projekt löschen |
 
-Der Ersteller eines Projekts bekommt automatisch Admin-Rechte.
+Der Ersteller eines Projekts bekommt automatisch Admin-Rechte und kann nicht aus dem Projekt entfernt werden.
 
 ---
 
@@ -211,16 +241,56 @@ Das Datenbankschema (`db/schema.sql`) wird automatisch beim ersten Start des Pos
 
 ## CI/CD
 
-Die GitHub Actions Pipeline unter `.github/workflows/ci.yml` besteht aus drei Jobs:
+Die Pipeline liegt unter `.github/workflows/ci.yml` und wird von GitHub Actions ausgeführt. Sie besteht aus drei Jobs, die nacheinander ablaufen.
 
-1. **Tests ausführen** – läuft bei jedem Push und Pull Request auf `main` und `dev`. Nutzt den in-memory `StoreService`, braucht also keine externe Datenbank.
-2. **Docker-Image bauen und pushen** – läuft nur beim Merge auf `main`, baut das Image und pusht es in die GitHub Container Registry (`ghcr.io`).
-3. **Smoke Test** – startet den kompletten Stack via `docker compose` und prüft den `/api/health`-Endpunkt.
+### Wie die Pipeline funktioniert
 
-Das fertige Image kann direkt via Docker Compose gezogen und gestartet werden:
+**Job 1 – Tests (`test`)**
+
+Dieser Job läuft bei jedem Push auf `main` oder `dev` sowie bei Pull Requests auf `main`. Er installiert die Abhängigkeiten und führt `npm test` aus. Die Tests nutzen den in-memory `StoreService`, brauchen also keine laufende Datenbank. Das ist praktisch, weil man so keine externe PostgreSQL-Instanz in der CI aufsetzen muss.
+
+**Job 2 – Docker-Image bauen und pushen (`build-and-push`)**
+
+Dieser Job läuft nur, wenn Job 1 erfolgreich war und der Push auf den `main`-Branch erfolgt ist. Er baut das Docker-Image und pushed es in die GitHub Container Registry (GHCR) unter `ghcr.io/<dein-github-nutzername>/what-stodo`. Das Image bekommt zwei Tags: `:latest` und den kurzen Commit-SHA (z.B. `:a1b2c3d`), damit man bei Bedarf auf einen bestimmten Stand zurückwechseln kann.
+
+**Job 3 – Smoke Test (`smoke-test`)**
+
+Ebenfalls nur auf `main`. Dieser Job startet den kompletten Stack via `docker compose up` und prüft, ob der `/api/health`-Endpunkt innerhalb von 90 Sekunden mit `{"status":"ok"}` antwortet. Es ist kein vollständiger Test, aber er stellt sicher, dass das Image zumindest hochfährt und die Datenbank erreichbar ist.
+
+### Was man tun muss, damit die Pipeline funktioniert
+
+1. **Packages für Repository freigeben**
+
+   Das Image wird in die GitHub Container Registry gepusht. Damit das funktioniert, muss die GitHub Actions-Pipeline Schreibrechte auf Packages haben. In der `ci.yml` ist das bereits konfiguriert:
+
+   ```yaml
+   permissions:
+     contents: read
+     packages: write
+   ```
+
+   Das reicht normalerweise aus. Der `GITHUB_TOKEN` wird automatisch von GitHub bereitgestellt – es muss kein eigener Token angelegt werden.
+
+2. **Sichtbarkeit des Packages einstellen**
+
+   Nach dem ersten erfolgreichen Push erscheint das Image unter `github.com/<dein-nutzer>?tab=packages`. Standardmäßig ist es privat. Wenn es öffentlich gemacht werden soll (z.B. damit andere es mit `docker pull` ziehen können), kann man dies in den Package-Einstellungen auf GitHub ändern.
+
+3. **Branch-Schutz und Secrets**
+
+   Die Pipeline braucht keine zusätzlichen Secrets – `GITHUB_TOKEN` ist immer verfügbar. Wenn man die App auf einem Server deployen will, musst man dort eigene Secrets (z.B. `SESSION_SECRET`, DB-Passwort) als Repository-Secrets unter *Settings > Secrets and variables > Actions* hinterlegen und in der Pipeline referenzieren.
+
+4. **Auf `dev` wird kein Image gebaut**
+
+   Branches unter `dev` durchlaufen nur Job 1 (Tests). Das ist bewusst so gewählt, damit nicht bei jedem Feature-Branch ein Image in die Registry gepusht wird. Nur was in `main` landet, wird auch wirklich gebaut und veröffentlicht.
+
+### Aktuellen Stand prüfen
+
+Den Ablauf der Pipeline sieht man unter dem Tab *Actions* im GitHub-Repository. Wenn ein Job fehlschlägt, sieht man dort die Logs. Die häufigsten Fehler sind falsch gesetzte Permissions oder ein Syntaxfehler in der `docker-compose.yml`.
+
+Das fertige Image kann nach einem erfolgreichen Build direkt gezogen werden:
 
 ```bash
-docker pull ghcr.io/therealnicroass/what-stodo:latest
+docker pull ghcr.io/therealnicrass/what-stodo:latest
 ```
 
 ---
