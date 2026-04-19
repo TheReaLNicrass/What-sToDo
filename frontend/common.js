@@ -1,3 +1,9 @@
+// Theme wird direkt beim Laden gesetzt, damit kein kurzes Aufblitzen des falschen Themes passiert.
+(function applyStoredTheme() {
+  const saved = localStorage.getItem('colorTheme');
+  if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+})();
+
 window.AppCommon = (() => {
   const storageKeys = {
     currentUser: 'currentUser',
@@ -65,6 +71,37 @@ window.AppCommon = (() => {
     }
   }
 
+  function getTheme() {
+    return localStorage.getItem('colorTheme') || 'dark';
+  }
+
+  function toggleTheme() {
+    const next = getTheme() === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('colorTheme', next);
+    if (next === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+    // Icon im Button aktualisieren
+    const btn = document.getElementById('themeToggleBtn');
+    if (btn) btn.innerHTML = themeIcon(next);
+  }
+
+  // Gibt das passende SVG-Icon für den aktuellen Theme-Zustand zurück.
+  // Sonnensymbol = aktuell dark (Wechsel zu light), Mondsymbol = aktuell light (Wechsel zu dark).
+  function themeIcon(theme) {
+    if (theme === 'light') {
+      return `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>`;
+    }
+    return `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>`;
+  }
+
   function renderShell({ pageKey }) {
     const user = getCurrentUser();
     const navItems = [
@@ -92,6 +129,7 @@ window.AppCommon = (() => {
               <p class="user-email">${user ? escapeHtml(user.email) : ''}</p>
             </div>
           </div>
+          <button id="themeToggleBtn" class="theme-toggle-btn" title="Theme wechseln">${themeIcon(getTheme())}</button>
           <button id="globalLogoutBtn" class="logout-btn ${user ? '' : 'is-hidden'}" title="Abmelden">
             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -116,6 +154,8 @@ window.AppCommon = (() => {
         location.href = '/auth';
       };
     }
+    const themeBtn = document.getElementById('themeToggleBtn');
+    if (themeBtn) themeBtn.onclick = toggleTheme;
   }
 
   function notify(type, text = '') {
@@ -142,6 +182,7 @@ window.AppCommon = (() => {
     escapeHtml,
     getCurrentProjectId,
     getCurrentUser,
+    getTheme,
     loadSessionUser,
     logout,
     notify,
@@ -149,5 +190,6 @@ window.AppCommon = (() => {
     requireAuth,
     setCurrentProjectId,
     setCurrentUser,
+    toggleTheme,
   };
 })();

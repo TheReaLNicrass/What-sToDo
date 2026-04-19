@@ -1,0 +1,126 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ----------------------------------------------------------------
+  # Job 1: Tests ausführen (läuft auf jedem Push und PR)
+  # Nutzt den in-memory StoreService, braucht daher keine echte DB.
+  # ----------------------------------------------------------------
+  test:
+    name: Tests ausführen
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Tests ausführen
+        run: npm test
+
+  # ----------------------------------------------------------------
+  # Job 2: Docker-Image bauen und in die GHCR pushen
+  # Läuft nur auf dem main-Branch nach erfolgreichem Testlauf.
+  # Das Image wird mit :latest und dem commit-SHA getaggt.
+  # Doku: https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry
+  # ----------------------------------------------------------------
+  build-and-push:
+    name: Docker-Image bauen und pushen
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Docker Buildx einrichten
+        uses: docker/setup-buildx-action@v3
+
+      - name: Bei GitHub Container Registry anmelden
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Metadaten für das Image ermitteln (Tags, Labels)
+      # Doku: https://github.com/docker/metadata-action
+      - name: Docker-Metadaten ermitteln
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=,format=short
+
+      - name: Docker-Image bauen und pushen
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ----------------------------------------------------------------
+  # Job 3: Docker Compose validieren (smoke test)
+  # Prüft, ob der Stack korrekt hochfährt. Läuft nur auf main.
+  # ----------------------------------------------------------------
+  smoke-test:
+    name: Docker Compose Smoke Test
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Stack starten
+        run: |
+          # SESSION_SECRET setzen damit der Container nicht mit dem dev-default startet
+          export SESSION_SECRET=ci-smoke-secret
+          docker compose up -d --build
+          # Warten bis der Health-Check des app-Containers grün ist
+          for i in $(seq 1 30); do
+            STATUS=$(docker compose ps --format json | python3 -c "import sys,json; data=json.load(sys.stdin) if isinstance(json.load(open('/dev/stdin')), list) else [json.load(open('/dev/stdin'))]; exit(0)" 2>/dev/null || true)
+            if curl -sf http://localhost:3000/api/health; then
+              echo "App ist erreichbar."
+              break
+            fi
+            echo "Warte auf App... ($i/30)"
+            sleep 3
+          done
+
+      - name: Health-Endpunkt prüfen
+        run: |
+          RESPONSE=$(curl -sf http://localhost:3000/api/health)
+          echo "Response: $RESPONSE"
+          echo "$RESPONSE" | grep -q '"status":"ok"'
+
+      - name: Stack herunterfahren
+        if: always()
+        run: docker compose down -v

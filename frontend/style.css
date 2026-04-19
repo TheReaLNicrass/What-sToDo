@@ -3,14 +3,7 @@
   --panel: rgba(12, 23, 42, 0.92);
   --panel-soft: rgba(18, 31, 56, 0.88);
   --line: rgba(148, 163, 184, 0.18);
-  --bg: #07111f;
-  --panel: rgba(12, 23, 42, 0.92);
-  --panel-soft: rgba(18, 31, 56, 0.88);
-  --line: rgba(148, 163, 184, 0.18);
   --text: #e5eefc;
-  --muted: #93a4bf;
-  --primary: #60a5fa;
-  --primary-strong: #2563eb;
   --muted: #93a4bf;
   --primary: #60a5fa;
   --primary-strong: #2563eb;
@@ -18,21 +11,44 @@
   --success: #22c55e;
   --warning: #f59e0b;
   --shadow: 0 20px 45px rgba(0, 0, 0, 0.28);
+  --body-bg1: rgba(37, 99, 235, 0.25);
+  --body-bg2: rgba(34, 197, 94, 0.15);
+  --body-bg3: #07111f;
+  --body-bg4: #0a1529;
+}
+
+/* Light mode overrides – gesetzt via data-theme="light" auf dem html-Element */
+[data-theme="light"] {
+  --bg: #f0f4f8;
+  --panel: rgba(255, 255, 255, 0.95);
+  --panel-soft: rgba(240, 245, 255, 0.98);
+  --line: rgba(100, 120, 160, 0.2);
+  --text: #1a2540;
+  --muted: #5a6a85;
+  --primary: #2563eb;
+  --primary-strong: #1d4ed8;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --shadow: 0 20px 45px rgba(0, 0, 0, 0.10);
+  --body-bg1: rgba(37, 99, 235, 0.08);
+  --body-bg2: rgba(34, 197, 94, 0.06);
+  --body-bg3: #f0f4f8;
+  --body-bg4: #e8eef8;
 }
 * { box-sizing: border-box; }
 body {
   margin: 0;
   min-height: 100vh;
-  min-height: 100vh;
   font-family: Inter, system-ui, sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.25), transparent 30%),
-    radial-gradient(circle at top right, rgba(34, 197, 94, 0.15), transparent 22%),
-    linear-gradient(180deg, #07111f 0%, #0a1529 100%);
+    radial-gradient(circle at top left, var(--body-bg1), transparent 30%),
+    radial-gradient(circle at top right, var(--body-bg2), transparent 22%),
+    linear-gradient(180deg, var(--body-bg3) 0%, var(--body-bg4) 100%);
 }
-button, input, select, textarea, a { font: inherit; }
-a { color: inherit; text-decoration: none; }
+button, input, select, textarea, a { font: inherit; color: inherit; }
+a { text-decoration: none; }
 
 /* ============================================================
    AUTH PAGE (standalone — no sidebar)
@@ -104,7 +120,7 @@ a { color: inherit; text-decoration: none; }
 /* ---- Sidebar ---- */
 .sidebar {
   border-right: 1px solid var(--line);
-  background: rgba(4, 11, 23, 0.6);
+  background: var(--panel);
   backdrop-filter: blur(24px);
   display: flex;
   flex-direction: column;
@@ -331,7 +347,7 @@ a { color: inherit; text-decoration: none; }
   letter-spacing: 0.18em;
   color: var(--primary);
 }
-h1, h2, h3, h4, p { margin-top: 0; }
+h1, h2, h3, h4, p { margin-top: 0; margin-bottom: 0; }
 .muted { color: var(--muted); }
 .small { font-size: 0.82rem; }
 .field { display: grid; gap: 7px; }
@@ -382,6 +398,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+  align-items: start;
 }
 .grid.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .section-head, .action-row, .task-card-head, .task-actions, .task-nav {
@@ -432,10 +449,13 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
   justify-content: space-between;
   gap: 14px;
   border: 1px solid var(--line);
-  background: rgba(11, 20, 39, 0.78);
+  background: var(--panel-soft);
   padding: 14px 16px;
   border-radius: 14px;
 }
+.list-item > div { min-width: 0; }
+.list-item strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list-item .muted { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.82rem; }
 .list-item.active { outline: 2px solid rgba(96, 165, 250, 0.7); }
 .list-item.static { cursor: default; }
 
@@ -446,7 +466,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 .task-card {
   border-radius: 18px;
   border: 1px solid var(--line);
-  background: rgba(9, 18, 35, 0.88);
+  background: var(--panel-soft);
   padding: 18px;
   border-left: 5px solid var(--primary);
 }
@@ -477,3 +497,26 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
   .stats-row { grid-template-columns: 1fr 1fr; }
   .project-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   THEME TOGGLE BUTTON
+   ============================================================ */
+.theme-toggle-btn {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--muted);
+  border: 0;
+  border-radius: 10px;
+  padding: 8px;
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.16s, color 0.16s;
+}
+.theme-toggle-btn:hover { background: rgba(148, 163, 184, 0.22); color: var(--text); }
+
+/* Project card und Task-card Hintergründe auf CSS-Variablen umstellen */
+.project-card { background: var(--panel-soft); }
+.task-list-item { background: var(--panel-soft); }
+.stat-card { background: var(--panel); }

@@ -7,12 +7,19 @@ const { buildProjectRouter } = require('./routes/projects');
 const { buildTaskRouter } = require('./routes/tasks');
 const { readSessionUserId } = require('./utils/session');
 
+// createApp ist eine Factory-Funktion – der Service kann von außen injiziert werden.
+// Das macht es möglich, im Test einen in-memory StoreService zu übergeben,
+// ohne die echte DB zu brauchen (Dependency Injection Pattern).
 function createApp({ storeService = null } = {}) {
+  // Wenn DB_HOST gesetzt ist, wird PostgreSQL genutzt, sonst der dateibasierte Fallback.
   const service = storeService || (process.env.DB_HOST ? new DatabaseService() : new StoreService());
   const app = express();
   const frontendDir = path.join(__dirname, '../../frontend');
 
   app.use(express.json());
+
+  // CORS-Header manuell setzen, damit die API auch von anderen Origins aus erreichbar ist.
+  // In Produktion sollte '*' durch die tatsächliche Frontend-Domain ersetzt werden.
   app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -24,11 +31,18 @@ function createApp({ storeService = null } = {}) {
   app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
   app.use('/api/auth', buildAuthRouter(service));
 
+  // Auth-Middleware für alle geschützten /api-Routen.
+  // Das Session-Cookie wird überprüft und der Nutzer an req.user gehängt,
+  // damit nachfolgende Handler direkt darauf zugreifen können.
+  // Doku zum Cookie-Format: src/utils/session.js
   app.use('/api', async (req, res, next) => {
     try {
-      const userId = readSessionUserId(req.headers.cookie || '');
-      if (!userId) return res.status(401).json({ error: 'Authentifizierung erforderlich.' });
-      const user = await service.getUserById(userId);
+      const sessionValue = readSessionUserId(req.headers.cookie || '');
+      if (!sessionValue) return res.status(401).json({ error: 'Authentifizierung erforderlich.' });
+      const user = service.getUserByToken
+        ? await Promise.resolve(service.getUserByToken(sessionValue))
+        : await service.getUserById(sessionValue);
+      if (!user) return res.status(401).json({ error: 'Authentifizierung erforderlich.' });
       req.user = user;
       return next();
     } catch (error) {
